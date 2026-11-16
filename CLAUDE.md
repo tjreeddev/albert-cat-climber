@@ -19,7 +19,8 @@ CSC299 project: a small 16-bit-style pixel-art platformer where Albert, the deve
 
 ## Tech stack
 - Python 3 + Pygame; pytest for tests.
-- Dependencies are limited to `pygame` and `pytest` (listed in `requirements.txt`).
+- Dependencies are limited to `pygame-ce` and `pytest` (listed in `requirements.txt`).
+- `pygame-ce` is the Community Edition of Pygame, used because classic `pygame` has no Python 3.14 wheels. Always write `import pygame` in code; never add the classic `pygame` package as a dependency.
 
 ## Commands
 - Install: `pip install -r requirements.txt`

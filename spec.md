@@ -24,7 +24,7 @@ Collectibles, enemies, moving platforms, multiple levels, sound or music, power-
 
 | Topic | Decision |
 |---|---|
-| Language / framework | Python 3 + Pygame |
+| Language / framework | Python 3 + Pygame, installed as the `pygame-ce` distribution (Community Edition; classic `pygame` has no Python 3.14 wheels). Code still uses `import pygame`. |
 | Tests | pytest, running headlessly (`SDL_VIDEODRIVER=dummy`) |
 | Internal resolution | 320×180 pixels |
 | Window scale | ×4, whole-number scaling with nearest-neighbour filtering (no smoothing) |
@@ -104,8 +104,8 @@ Collectibles, enemies, moving platforms, multiple levels, sound or music, power-
 - Whether the overall look fits the 16-bit style is judged by manual review.
 
 ### R8 — Runs on the user's own computer
-- The game runs locally on Windows with Python 3 and Pygame installed. No network connection or server is needed.
-- The only dependencies are `pygame` (game) and `pytest` (tests).
+- The game runs locally on Windows with Python 3 and pygame-ce installed. No network connection or server is needed.
+- The only dependencies are `pygame-ce` (game, imported as `pygame`) and `pytest` (tests).
 - `python -m albert` opens the game window.
 - Headless, the game can initialise and run a few hundred frames of scripted input without errors.
 
@@ -120,7 +120,7 @@ Collectibles, enemies, moving platforms, multiple levels, sound or music, power-
 | R5 | Landing on the top cabinet gives WON; touching it from below or the side doesn't; other cabinets don't; input is ignored while WON |
 | R6 | Restarting from WON or LOST restores the full initial state; restart does nothing while PLAYING |
 | R7 | Resolution is 320×180; scale is a whole number; nearest-neighbour scaling; sprites use ≤16 colours from the palette; sprite sizes are as expected |
-| R8 | Headless startup plus about 300 frames run without error; dependencies are only pygame and pytest; no network modules are imported |
+| R8 | Headless startup plus about 300 frames run without error; dependencies are only pygame-ce and pytest; no network modules are imported |
 
 Visual quality (R7) and how the game feels to play are checked by hand.
 

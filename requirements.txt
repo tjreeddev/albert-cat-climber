@@ -1,0 +1,4 @@
+# pygame-ce (Community Edition) is used because classic pygame has no
+# Python 3.14 wheels. It is imported as `pygame`.
+pygame-ce>=2.5
+pytest>=8
