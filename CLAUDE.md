@@ -6,9 +6,11 @@ CSC299 project: a small 16-bit-style pixel-art platformer where Albert, the deve
 - `problem.md`: the original problem statement and requirements R1–R8. Don't edit it.
 - `spec.md`: the detailed spec with decisions, defaults and acceptance criteria. Follow it. If something is ambiguous or seems to need a change, ask the user before departing from it.
 
-## Round 1 scope rules
-- Implement only what R1–R8 and `spec.md` require.
-- Do **not** add collectibles, enemies, moving platforms, multiple levels, sound or music, power-ups, score/timers, extra menus or other features unless the user asks.
+## Scope rules (Rounds 1–2)
+- Implement only what R1–R14 and `spec.md` require. R1–R8 (Round 1) are unchanged by Round 2.
+- Round 2 adds one feature: optional cat treats (R9–R14, `spec.md` section 8). Cat treats are the only collectible.
+- Do **not** add other collectibles, enemies, moving platforms, multiple levels, lives, checkpoints, sound or music, power-ups, points/score, timers, extra menus or other features unless the user asks. The treat count is not a score.
+- Don't change the Round 1 cabinet layout.
 - Keep the code small and readable.
 
 ## Workflow
@@ -35,6 +37,7 @@ CSC299 project: a small 16-bit-style pixel-art platformer where Albert, the deve
 - Use a fixed timestep of 60 updates per second. Physics constants live in `config.py`.
 - Cabinets are one-way platforms (they collide only when landing from above).
 - Losing means falling below the world's bottom; there is no floor. Winning means landing on the highest cabinet.
+- Treats: `level.py` holds fixed treat positions (`Level.treats`); `game.py` tracks which were collected this run, and `restart()` clears that. Each update runs physics, then collects treats, then checks lose/win.
 
 ## Art style (R7)
 - Draw to a 320×180 internal surface, then scale it up by a whole number (×4) with nearest-neighbour filtering. Never use smooth scaling.
@@ -42,6 +45,6 @@ CSC299 project: a small 16-bit-style pixel-art platformer where Albert, the deve
 - Albert is a black cat. Give him a dark outline or highlight colour so he stands out against the cabinets and wall.
 
 ## Testing conventions
-- One test file per requirement: `tests/test_movement.py` (R1), `test_jump_gravity.py` (R2), `test_platforms.py` (R3), `test_lose.py` (R4), `test_win.py` (R5), `test_restart.py` (R6), `test_art_style.py` (R7), `test_runs_locally.py` (R8).
+- One test file per requirement: `tests/test_movement.py` (R1), `test_jump_gravity.py` (R2), `test_platforms.py` (R3), `test_lose.py` (R4), `test_win.py` (R5), `test_restart.py` (R6), `test_art_style.py` (R7), `test_runs_locally.py` (R8), `test_treat_placement.py` (R9), `test_treat_collect.py` (R10), `test_treat_count.py` (R11), `test_hud.py` (R12), `test_treat_restart.py` (R13), `test_treats_optional.py` (R14).
 - Name each test or docstring after the requirement it covers, e.g. `test_r4_falling_below_world_loses`.
-- Test logic through the pure modules; only the R7 and R8 tests touch Pygame.
+- Test logic through the pure modules; only the R7, R8 and R12 (HUD drawing) tests touch Pygame.

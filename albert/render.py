@@ -1,9 +1,9 @@
-"""Drawing: world with camera offset, Albert, overlays, and pixel-perfect scaling (R7)."""
+"""Drawing: world with camera offset, Albert, treats, HUD, overlays, and pixel-perfect scaling (R7)."""
 
 import pygame
 
 from albert import config
-from albert.game import GameState
+from albert.game import GameState, hud_text
 from albert.sprites import render_text
 
 C = config.COLORS
@@ -50,6 +50,16 @@ def _draw_overlay(canvas, title, colour):
     canvas.blit(hint, hint.get_rect(midbottom=(panel.centerx, panel.bottom - 10)))
 
 
+def _draw_hud(canvas, game, sprites):
+    """R12: treat icon and "collected/total", fixed to the top-left of the screen."""
+    icon = sprites["treat"]
+    text = render_text(hud_text(game), C["text_white"])
+    panel = pygame.Rect(2, 2, 3 + icon.get_width() + 3 + text.get_width() + 3, 12)
+    pygame.draw.rect(canvas, C["panel"], panel)
+    canvas.blit(icon, (panel.left + 3, panel.top + 2))
+    canvas.blit(text, (panel.left + 3 + icon.get_width() + 3, panel.top + 4))
+
+
 def draw(canvas, game, sprites):
     """Draw one frame of `game` onto the 320x180 internal canvas."""
     cam = round(game.camera_y)
@@ -65,9 +75,15 @@ def draw(canvas, game, sprites):
         if rect.colliderect(canvas.get_rect()):
             _tile(canvas, sprites["cabinet"], rect)
 
+    # Treats not yet collected this run (R10).
+    for t in game.visible_treats():
+        canvas.blit(sprites["treat"], (round(t.x), round(t.y) - cam))
+
     # Albert.
     player = game.player
     canvas.blit(_cat_frame(player, sprites), (round(player.x), round(player.y) - cam))
+
+    _draw_hud(canvas, game, sprites)
 
     if game.state == GameState.WON:
         _draw_overlay(canvas, "YOU WIN!", C["win_green"])

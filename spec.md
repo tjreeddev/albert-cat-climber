@@ -1,10 +1,10 @@
-# Albert Cat Climber — Specification (Round 1)
+# Albert Cat Climber — Specification (Rounds 1–2)
 
 ## 1. Overview
 
 Albert Cat Climber is a small 2D platformer based on the developer's black cat, Albert. The player guides Albert up a tower of kitchen cabinets. The goal is to reach the highest cabinet without falling.
 
-Round 1 is deliberately small. It covers only the requirements R1–R8 from `problem.md`.
+Round 1 is deliberately small. It covers only the requirements R1–R8 from `problem.md`. Round 2 adds one feature, optional cat treats (R9–R14), described in section 8. R1–R8 are unchanged.
 
 ## 2. Scope
 
@@ -19,6 +19,8 @@ Round 1 is deliberately small. It covers only the requirements R1–R8 from `pro
 
 ### Out of scope (Round 1)
 Collectibles, enemies, moving platforms, multiple levels, sound or music, power-ups, score/timer, menus beyond the win/lose overlay, save data, and anything else not required by `problem.md`.
+
+Round 2 lifts the "collectibles" exclusion for cat treats only (section 8). Everything else above stays out of scope.
 
 ## 3. Technical decisions
 
@@ -140,3 +142,75 @@ tests/
   test_win.py, test_restart.py, test_art_style.py, test_runs_locally.py
 requirements.txt
 ```
+
+## 8. Round 2 — Cat treats (R9–R14)
+
+### 8.1 Scope
+- **In scope:** cat treats placed on the existing level, collecting them, a per-run treat count, a HUD showing it, and resetting treats on restart.
+- **Out of scope:** enemies, moving platforms, multiple levels, power-ups, lives, checkpoints, sound or music, points/score, high scores, timers, save data, bonuses for collecting every treat, and any other feature not listed here.
+- The treat count is the only number the game tracks. It is not a score.
+- R1–R8 and the Round 1 cabinet layout (`_TOWER`) are unchanged.
+
+### 8.2 Decisions
+| Topic | Decision |
+|---|---|
+| Number of treats | 5 in the default level |
+| Treat size | 8×8 world pixels (`config.TREAT_SIZE`); the hitbox matches the sprite |
+| Placement | At most one treat per cabinet; never on the starting counter or the goal cabinet; each treat rests on its cabinet's top (treat bottom = cabinet top) and lies within the cabinet's width. Some sit near a cabinet edge so collecting them is a deliberate step. |
+| Touch rule | Albert's hitbox and the treat's hitbox overlap with positive area (strict inequalities; touching edges don't count). Touching in mid-air counts. |
+| Update order | Each `update` while `PLAYING`: physics step → collect treats → lose/win check. A treat touched on the winning frame counts. |
+| States | Treats are collected only while `PLAYING`, never in `WON` or `LOST`. |
+| A "run" | From the start or a restart until the next restart |
+| Data | `Level.treats` holds fixed treat positions (default: none). The game keeps the set of treats collected this run; `restart()` clears it. Logic stays in `level.py` and `game.py` (no pygame). |
+| HUD | A treat icon followed by `collected/total` (e.g. `2/5`) on a small dark panel in the top-left corner of the screen. It is fixed to the screen (not the camera) and is shown in every state, including the win and lose screens. |
+| Font | The 5×5 pixel font gains the digits `0–9` and `/`. |
+| Art (R7 rules) | The treat is a small fish-shaped cat treat. It uses only palette colours (two new treat colours are added), at most 16 colours and no semi-transparent pixels, with a dark outline so it stands out against the cabinets and wall. |
+
+### 8.3 Requirements and acceptance criteria
+
+#### R9 — Cat treats are placed on selected cabinets
+- The default level has exactly 5 treats.
+- Each treat rests on top of a cabinet and lies horizontally within it.
+- No treat is on the starting counter or the goal cabinet, and no two treats share a cabinet.
+- All treats are inside the world bounds and are `TREAT_SIZE`×`TREAT_SIZE`.
+
+#### R10 — Touching a treat collects it for the rest of the run
+- While `PLAYING`, when Albert's hitbox overlaps a treat's hitbox (positive area), the treat is collected.
+- This works both on a cabinet and in mid-air. Touching edges only doesn't collect.
+- A collected treat is no longer drawn (`Game.visible_treats()` excludes it) until the next restart.
+- A treat can't be collected twice in one run. Several treats touched on the same frame are all collected.
+- No treats are collected in `WON` or `LOST`.
+
+#### R11 — The game tracks treats collected this run
+- `Game.treats_collected` starts at 0 and goes up by exactly 1 per treat collected.
+- `Game.treats_total` equals the number of treats in the level and never changes.
+- A treat touched on the frame Albert wins is counted.
+
+#### R12 — The HUD shows collected and total treats
+- `hud_text(game)` (pure, in `game.py`) returns `"<collected>/<total>"`, e.g. `"0/5"`.
+- The HUD is drawn in the top-left corner, fixed to the screen whatever the camera position.
+- It is drawn in `PLAYING`, `WON` and `LOST`, and its pixels change when the count changes.
+- Every character the HUD can show has a glyph in the pixel font.
+
+#### R13 — Restarting restores treats and resets the count
+- Restarting after winning or losing sets the count to 0 and makes every treat visible again.
+- Pressing restart during `PLAYING` still does nothing (R6), including to treats.
+- Playing never changes the level's treat definitions.
+
+#### R14 — Treats are optional
+- Landing on the goal wins with 0 treats, or with only some of them.
+- Collecting every treat without landing on the goal doesn't win.
+- Nothing extra happens when all treats are collected.
+
+### 8.4 Automated test plan (Round 2)
+| Requirement | Test file | What the tests check |
+|---|---|---|
+| R9 | `tests/test_treat_placement.py` | Count of 5; each treat rests within a cabinet; not on the counter or goal; one per cabinet; inside the world; correct size |
+| R10 | `tests/test_treat_collect.py` | Walking and jumping into treats collects them; edge touch doesn't; collected treats aren't visible; no double collection; nothing in WON/LOST; two treats on one frame |
+| R11 | `tests/test_treat_count.py` | Starts at 0; +1 per treat; total is fixed; treat on the winning frame counts |
+| R12 | `tests/test_hud.py` | `hud_text` format; font has every HUD glyph; HUD pixels change with the count; HUD is fixed to the screen; drawn in every state |
+| R13 | `tests/test_treat_restart.py` | Restart after losing or winning restores treats and count; restart during PLAYING doesn't; level treat data never changes |
+| R14 | `tests/test_treats_optional.py` | Win with 0 or some treats; collecting all treats doesn't win |
+| R7 (extended) | `tests/test_art_style.py` | `"treat"` is added to the required sprites so the palette, colour-count and transparency checks cover it; the treat sprite matches `TREAT_SIZE` |
+
+No new modules are added; section 7's layout still applies, plus the six test files above.

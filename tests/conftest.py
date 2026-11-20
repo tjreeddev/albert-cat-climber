@@ -27,18 +27,25 @@ def make_game():
     platforms: list of (x, y, width, height) tuples
     start:     (x, y) top-left of Albert at the start
     add_decoy_goal: add DECOY_GOAL so none of `platforms` is the goal
+    treats:    optional list of (x, y) top-left treat positions (Round 2)
     """
 
-    def _make(platforms, start, world_width=320, world_height=1000, add_decoy_goal=True):
+    def _make(platforms, start, world_width=320, world_height=1000, add_decoy_goal=True, treats=()):
         from albert.game import Game
         from albert.level import Level, Platform
 
+        extra = {}
+        if treats:
+            from albert.level import Treat
+
+            extra["treats"] = [Treat(*t) for t in treats]
         specs = list(platforms) + ([DECOY_GOAL] if add_decoy_goal else [])
         level = Level(
             platforms=[Platform(*p) for p in specs],
             world_width=world_width,
             world_height=world_height,
             start=start,
+            **extra,
         )
         return Game(level=level)
 

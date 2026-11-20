@@ -1,6 +1,8 @@
 # Albert Cat Climber
 
-A small 16-bit-style pixel-art platformer starring Albert, a black cat, climbing the kitchen cabinets. Jump from cabinet to cabinet up a three-screen tower and land on the highest one to win. If you fall below the bottom of the tower, you lose. CSC299 project, Round 1.
+A small 16-bit-style pixel-art platformer starring Albert, a black cat, climbing the kitchen cabinets. Jump from cabinet to cabinet up a three-screen tower and land on the highest one to win. If you fall below the bottom of the tower, you lose. CSC299 project, Rounds 1–2.
+
+Five fish-shaped cat treats sit on cabinets along the way. Touch one to collect it; the counter in the top-left corner shows how many you have (e.g. `2/5`). Treats are optional: you can win without them. Restarting puts every treat back and resets the counter to zero.
 
 ## Controls
 
@@ -37,4 +39,4 @@ python -m venv .venv
 .venv\Scripts\python -m pytest
 ```
 
-The tests run without opening a window. There is one test file per requirement (R1–R8) in `tests/`. See `problem.md` for the requirements and `spec.md` for the full specification.
+The tests run without opening a window. There is one test file per requirement (R1–R14) in `tests/`. See `problem.md` for the requirements and `spec.md` for the full specification.

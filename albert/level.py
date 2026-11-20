@@ -1,6 +1,6 @@
 """The cabinet tower level. Pure Python: must not import pygame."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from albert import config
 
@@ -15,12 +15,23 @@ class Platform:
     height: float
 
 
+@dataclass(eq=False)
+class Treat:
+    """A cat treat (R9). Its position is fixed; the game tracks collection."""
+
+    x: float
+    y: float
+    width: float = config.TREAT_SIZE
+    height: float = config.TREAT_SIZE
+
+
 @dataclass
 class Level:
     platforms: list
     world_width: int
     world_height: int
     start: tuple  # (x, y) top-left of Albert at the start
+    treats: list = field(default_factory=list)  # R9 (Round 2)
 
     @property
     def goal_platform(self):
@@ -47,6 +58,16 @@ _TOWER = [
     (258, 26, 40, 16),  # goal: the highest cabinet
 ]
 
+# R9: treats as (cabinet index in _TOWER, x). Each rests on its cabinet's top.
+# Never on the counter (0) or the goal (11); two sit near a cabinet edge.
+_TREATS = [
+    (2, 200),  # centred
+    (3, 290),  # far right edge of the right-wall cabinet
+    (5, 136),  # centred
+    (7, 2),  # far left edge of the left-wall cabinet
+    (9, 140),  # centred
+]
+
 WORLD_WIDTH = config.INTERNAL_WIDTH
 WORLD_HEIGHT = 540
 
@@ -55,4 +76,7 @@ def build_level():
     platforms = [Platform(*spec) for spec in _TOWER]
     counter = platforms[0]
     start = (32, counter.y - config.PLAYER_HEIGHT)
-    return Level(platforms=platforms, world_width=WORLD_WIDTH, world_height=WORLD_HEIGHT, start=start)
+    treats = [Treat(x, platforms[i].y - config.TREAT_SIZE) for i, x in _TREATS]
+    return Level(
+        platforms=platforms, world_width=WORLD_WIDTH, world_height=WORLD_HEIGHT, start=start, treats=treats
+    )

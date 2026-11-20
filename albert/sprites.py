@@ -1,4 +1,4 @@
-"""16-bit-style pixel art for Albert, the cabinets, the wall and overlay text (R7).
+"""16-bit-style pixel art for Albert, the cabinets, the wall, cat treats and text (R7).
 
 Every sprite is a character map; each character is a palette colour from
 `config.COLORS` and '.' is transparent.
@@ -88,7 +88,25 @@ _CABINET = [
     "dddddddddddddddd",
 ]
 
-# 5x5 pixel font for the win/lose overlay.
+_TREAT_KEY = {
+    "K": C["cat_black"],
+    "S": C["treat_mid"],
+    "H": C["treat_light"],
+}
+
+# A fish-shaped cat treat, 8x8 (R9). Dark outline so it stands out on wood and wall.
+_TREAT = [
+    "........",
+    "........",
+    "..KKKK.K",
+    ".KSHHSKK",
+    "KSKSSSSK",
+    "KSSSSSSK",
+    ".KSSSSKK",
+    "..KKKK.K",
+]
+
+# 5x5 pixel font for the win/lose overlay and the treat HUD.
 _FONT = {
     "A": [".###.", "#...#", "#####", "#...#", "#...#"],
     "E": ["#####", "#....", "####.", "#....", "#####"],
@@ -105,6 +123,17 @@ _FONT = {
     "Y": ["#...#", ".#.#.", "..#..", "..#..", "..#.."],
     "!": ["..#..", "..#..", "..#..", ".....", "..#.."],
     " ": [".....", ".....", ".....", ".....", "....."],
+    "/": ["....#", "...#.", "..#..", ".#...", "#...."],
+    "0": [".###.", "#..##", "#.#.#", "##..#", ".###."],
+    "1": ["..#..", ".##..", "..#..", "..#..", ".###."],
+    "2": ["####.", "....#", ".###.", "#....", "#####"],
+    "3": ["####.", "....#", ".###.", "....#", "####."],
+    "4": ["#..#.", "#..#.", "#####", "...#.", "...#."],
+    "5": ["#####", "#....", "####.", "....#", "####."],
+    "6": [".###.", "#....", "####.", "#...#", ".###."],
+    "7": ["#####", "....#", "...#.", "..#..", "..#.."],
+    "8": [".###.", "#...#", ".###.", "#...#", ".###."],
+    "9": [".###.", "#...#", ".####", "....#", ".###."],
 }
 
 
@@ -143,6 +172,7 @@ def load_sprites():
     sprites = {name: surface_from_map(_CAT_UPPER + legs, _CAT_KEY) for name, legs in _CAT_LEGS.items()}
     sprites["cabinet"] = surface_from_map(_CABINET, _CABINET_KEY)
     sprites["background"] = _wall_tile()
+    sprites["treat"] = surface_from_map(_TREAT, _TREAT_KEY)
     return sprites
 
 
