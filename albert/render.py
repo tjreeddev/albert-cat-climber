@@ -1,4 +1,4 @@
-"""Drawing: world with camera offset, Albert, treats, HUD, overlays, and pixel-perfect scaling (R7)."""
+"""Drawing: world with camera offset, Albert, drawers, treats, HUD, overlays, and pixel-perfect scaling (R7)."""
 
 import pygame
 
@@ -74,6 +74,10 @@ def draw(canvas, game, sprites):
         rect = pygame.Rect(round(p.x), round(p.y) - cam, round(p.width), round(p.height))
         if rect.colliderect(canvas.get_rect()):
             _tile(canvas, sprites["cabinet"], rect)
+
+    # Moving drawers (R15), at their current positions.
+    for d in game.drawers:
+        canvas.blit(sprites["drawer"], (round(d.x), round(d.y) - cam))
 
     # Treats not yet collected this run (R10).
     for t in game.visible_treats():

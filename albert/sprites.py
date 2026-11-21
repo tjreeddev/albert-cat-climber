@@ -1,4 +1,4 @@
-"""16-bit-style pixel art for Albert, the cabinets, the wall, cat treats and text (R7).
+"""16-bit-style pixel art for Albert, the cabinets, drawers, the wall, cat treats and text (R7).
 
 Every sprite is a character map; each character is a palette colour from
 `config.COLORS` and '.' is transparent.
@@ -88,6 +88,27 @@ _CABINET = [
     "dddddddddddddddd",
 ]
 
+# A 32x16 pulled-out drawer (R15): light wooden top lip to land on, a panelled
+# front and a centred brass pull, with a dark edge so it reads against the wall.
+_DRAWER = [
+    "LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL",
+    "MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM",
+    "dddddddddddddddddddddddddddddddd",
+    "dMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMd",
+    "dMLLLLLLLLLLLLLLLLLLLLLLLLLLLLMd",
+    "dMLMMMMMMMMMMMMMMMMMMMMMMMMMMLMd",
+    "dMLMMMMMMMMMMMMMMMMMMMMMMMMMMLMd",
+    "dMLMMMMMMMMMHHHHHHHHMMMMMMMMMLMd",
+    "dMLMMMMMMMMMHddddddHMMMMMMMMMLMd",
+    "dMLMMMMMMMMMMMMMMMMMMMMMMMMMMLMd",
+    "dMLMMMMMMMMMMMMMMMMMMMMMMMMMMLMd",
+    "dMLMMMMMMMMMMMMMMMMMMMMMMMMMMLMd",
+    "dMLLLLLLLLLLLLLLLLLLLLLLLLLLLLMd",
+    "dMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMd",
+    "dddddddddddddddddddddddddddddddd",
+    ".dddddddddddddddddddddddddddddd.",
+]
+
 _TREAT_KEY = {
     "K": C["cat_black"],
     "S": C["treat_mid"],
@@ -173,6 +194,7 @@ def load_sprites():
     sprites["cabinet"] = surface_from_map(_CABINET, _CABINET_KEY)
     sprites["background"] = _wall_tile()
     sprites["treat"] = surface_from_map(_TREAT, _TREAT_KEY)
+    sprites["drawer"] = surface_from_map(_DRAWER, _CABINET_KEY)
     return sprites
 
 

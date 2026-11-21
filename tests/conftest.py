@@ -28,9 +28,12 @@ def make_game():
     start:     (x, y) top-left of Albert at the start
     add_decoy_goal: add DECOY_GOAL so none of `platforms` is the goal
     treats:    optional list of (x, y) top-left treat positions (Round 2)
+    drawers:   optional list of dicts of level.Drawer keyword arguments (Round 3)
     """
 
-    def _make(platforms, start, world_width=320, world_height=1000, add_decoy_goal=True, treats=()):
+    def _make(
+        platforms, start, world_width=320, world_height=1000, add_decoy_goal=True, treats=(), drawers=()
+    ):
         from albert.game import Game
         from albert.level import Level, Platform
 
@@ -39,6 +42,10 @@ def make_game():
             from albert.level import Treat
 
             extra["treats"] = [Treat(*t) for t in treats]
+        if drawers:
+            from albert.level import Drawer
+
+            extra["drawers"] = [Drawer(**d) for d in drawers]
         specs = list(platforms) + ([DECOY_GOAL] if add_decoy_goal else [])
         level = Level(
             platforms=[Platform(*p) for p in specs],

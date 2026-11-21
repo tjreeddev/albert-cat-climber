@@ -28,6 +28,36 @@ class Player:
         return self.y + self.height
 
 
+@dataclass
+class MovingDrawer:
+    """A drawer's current state during a run (R16). Built from a level.Drawer."""
+
+    x: float
+    y: float
+    width: float
+    height: float
+    min_x: float
+    max_x: float
+    speed: float
+    direction: int
+
+    @classmethod
+    def from_definition(cls, d):
+        return cls(d.start_x, d.y, d.width, d.height, d.min_x, d.max_x, d.speed, d.start_direction)
+
+
+def move_drawer(drawer, dt):
+    """R16: slide by speed*dt; stop at an end and reverse. Returns the x change."""
+    old_x = drawer.x
+    x = drawer.x + drawer.direction * drawer.speed * dt
+    if x >= drawer.max_x:
+        x, drawer.direction = drawer.max_x, -1
+    elif x <= drawer.min_x:
+        x, drawer.direction = drawer.min_x, 1
+    drawer.x = x
+    return x - old_x
+
+
 def overlaps_horizontally(player, platform):
     return player.x < platform.x + platform.width and player.x + player.width > platform.x
 

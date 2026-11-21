@@ -31,9 +31,12 @@ class Game:
 
     def restart(self):
         """R6: put everything back to the starting state."""
+        self.drawers = [physics.MovingDrawer.from_definition(d) for d in self.level.drawers]  # R16/R20
         x, y = self.level.start
         self.player = physics.Player(x=x, y=y)
-        self.player.on_ground = any(physics.is_standing_on(self.player, p) for p in self.level.platforms)
+        self.player.on_ground = any(
+            physics.is_standing_on(self.player, p) for p in self.level.platforms + self.drawers
+        )
         self.state = GameState.PLAYING
         self.collected = set()  # R10/R13: treats collected this run
         self.camera_y = self._camera_target()
@@ -45,9 +48,11 @@ class Game:
                 self.restart()
             return
 
+        self._move_drawers(dt)
+
         direction = int(inputs.right) - int(inputs.left)
         landed = physics.step(
-            self.player, direction, inputs.jump, self.level.platforms, self.level.world_width, dt
+            self.player, direction, inputs.jump, self.level.platforms + self.drawers, self.level.world_width, dt
         )
 
         self._collect_treats()  # R10: before the win check, so the winning frame counts
@@ -71,6 +76,15 @@ class Game:
     def visible_treats(self):
         """R10: treats not yet collected this run, in level order."""
         return [t for t in self.level.treats if t not in self.collected]
+
+    def _move_drawers(self, dt):
+        """R16/R18: move every drawer and carry Albert if he stands on one."""
+        p = self.player
+        ridden = next((d for d in self.drawers if p.on_ground and physics.is_standing_on(p, d)), None)
+        for d in self.drawers:
+            dx = physics.move_drawer(d, dt)
+            if d is ridden:
+                p.x = min(max(p.x + dx, 0.0), self.level.world_width - p.width)
 
     def _collect_treats(self):
         p = self.player

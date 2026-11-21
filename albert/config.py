@@ -14,6 +14,11 @@ PLAYER_HEIGHT = 14
 # --- Cat treats (Round 2, R9-R14): 8x8 hitbox matching the treat sprite ---
 TREAT_SIZE = 8
 
+# --- Moving drawers (Round 3, R15-R20): 32x16, matching the drawer sprite ---
+DRAWER_WIDTH = 32
+DRAWER_HEIGHT = 16
+DRAWER_SPEED = 40.0  # px/s, slower than Albert's MOVE_SPEED
+
 # --- Physics (world pixels and seconds; y grows downward) ---
 MOVE_SPEED = 100.0  # horizontal speed while a direction is held (R1)
 GRAVITY = 900.0  # downward acceleration (R2)

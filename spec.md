@@ -1,10 +1,10 @@
-# Albert Cat Climber — Specification (Rounds 1–2)
+# Albert Cat Climber — Specification (Rounds 1–3)
 
 ## 1. Overview
 
 Albert Cat Climber is a small 2D platformer based on the developer's black cat, Albert. The player guides Albert up a tower of kitchen cabinets. The goal is to reach the highest cabinet without falling.
 
-Round 1 is deliberately small. It covers only the requirements R1–R8 from `problem.md`. Round 2 adds one feature, optional cat treats (R9–R14), described in section 8. R1–R8 are unchanged.
+Round 1 is deliberately small. It covers only the requirements R1–R8 from `problem.md`. Round 2 adds one feature, optional cat treats (R9–R14), described in section 8. R1–R8 are unchanged. Round 3 adds one feature, two horizontally moving cabinet drawers (R15–R20), described in section 9. R1–R14 behaviour is unchanged; the only Round 1 change is that two route cabinets become drawers (section 9.1).
 
 ## 2. Scope
 
@@ -20,7 +20,7 @@ Round 1 is deliberately small. It covers only the requirements R1–R8 from `pro
 ### Out of scope (Round 1)
 Collectibles, enemies, moving platforms, multiple levels, sound or music, power-ups, score/timer, menus beyond the win/lose overlay, save data, and anything else not required by `problem.md`.
 
-Round 2 lifts the "collectibles" exclusion for cat treats only (section 8). Everything else above stays out of scope.
+Round 2 lifts the "collectibles" exclusion for cat treats only (section 8). Round 3 lifts the "moving platforms" exclusion for two horizontally moving drawers only (section 9). Everything else above stays out of scope.
 
 ## 3. Technical decisions
 
@@ -149,7 +149,7 @@ requirements.txt
 - **In scope:** cat treats placed on the existing level, collecting them, a per-run treat count, a HUD showing it, and resetting treats on restart.
 - **Out of scope:** enemies, moving platforms, multiple levels, power-ups, lives, checkpoints, sound or music, points/score, high scores, timers, save data, bonuses for collecting every treat, and any other feature not listed here.
 - The treat count is the only number the game tracks. It is not a score.
-- R1–R8 and the Round 1 cabinet layout (`_TOWER`) are unchanged.
+- R1–R8 and the Round 1 cabinet layout (`_TOWER`) are unchanged. (Round 3 later replaces two cabinets with drawers; see section 9.1.)
 
 ### 8.2 Decisions
 | Topic | Decision |
@@ -212,5 +212,82 @@ requirements.txt
 | R13 | `tests/test_treat_restart.py` | Restart after losing or winning restores treats and count; restart during PLAYING doesn't; level treat data never changes |
 | R14 | `tests/test_treats_optional.py` | Win with 0 or some treats; collecting all treats doesn't win |
 | R7 (extended) | `tests/test_art_style.py` | `"treat"` is added to the required sprites so the palette, colour-count and transparency checks cover it; the treat sprite matches `TREAT_SIZE` |
+
+No new modules are added; section 7's layout still applies, plus the six test files above.
+
+## 9. Round 3 — Moving cabinet drawers (R15–R20)
+
+### 9.1 Scope
+- **In scope:** two cabinet drawers that slide left and right as one-way platforms, Albert riding them, and the timed jumps they create on the climbing route.
+- **Out of scope:** vertical or other moving platforms, more than two drawers, treats on drawers, crushing or pushing, enemies, multiple levels, lives, checkpoints, sound or music, power-ups, points/score, timers, and any other feature not listed here.
+- **Layout change (approved):** Round 1 cabinets 4 `(186, 342)` and 8 `(64, 160)` are removed from `_TOWER` and replaced by drawers that slide around those spots. The tower now has 10 static cabinets (still within section 4.1's 10–12). No treat moves and the goal cabinet is unchanged; only the cabinet indexes in `_TREATS` are renumbered.
+- R1–R14 behaviour is otherwise unchanged. The R3 climbability check (`test_r3_default_level_is_climbable`) now counts each drawer as a stop on the route, anywhere along its path. The R3 requirement text is unchanged.
+
+### 9.2 Decisions
+| Topic | Decision |
+|---|---|
+| Data | `Level.drawers` holds fixed drawer definitions (`level.Drawer`; default: none), kept separate from `Level.platforms`, so `goal_platform`, the cabinet count and the R9 treat checks only see cabinets. The game keeps each drawer's moving state in `Game.drawers` (same order). |
+| Drawer | `Drawer(min_x, max_x, y, width, height, speed, start_x, start_direction)`. Size is `DRAWER_WIDTH`×`DRAWER_HEIGHT` (32×16, matching the sprite). `y` never changes. Its left edge slides between `min_x` and `max_x`. |
+| Motion | Constant `speed` (default `config.DRAWER_SPEED` = 40 px/s, slower than Albert's 100). Each update moves it `speed × dt` in its direction; on reaching or passing an end it stops at that end and reverses. |
+| Default drawers | A: `min_x` 150, `max_x` 222, `y` 342, starts at x 186 moving right. B: `min_x` 30, `max_x` 100, `y` 160, starts at x 64 moving left. |
+| Update order (while `PLAYING`) | Find the drawer Albert is standing on (if any) → move drawers → carry Albert by that drawer's movement → physics step against cabinets and drawers → collect treats → lose/win check. |
+| Riding | While standing on a drawer, Albert's x changes by the drawer's movement that frame, clamped to the tower walls. Left/right input adds to it. He is not carried in the air and his jump doesn't keep the drawer's speed. |
+| Collision | Drawers are one-way platforms with exactly the R3 rules. They never push Albert sideways. |
+| States | Drawers move only while `PLAYING`; they freeze in `WON` and `LOST`. `restart()` puts every drawer back at its `start_x` and `start_direction`. |
+| Win / lose / treats | Landing on a drawer never wins (the goal is still the highest cabinet). Falling off a drawer out of the world loses (R4). Drawers hold no treats and don't affect the treat count or HUD. |
+| Art (R7 rules) | A 32×16 drawer front with a light top lip, a panel and a centred brass handle, using only existing palette colours, at most 16 colours and no semi-transparent pixels. |
+
+### 9.3 Requirements and acceptance criteria
+
+#### R15 — The level has two moving drawers
+- The default level has exactly 2 drawers.
+- Each drawer's whole path (from `min_x` to `max_x + width`) is inside the world.
+- Each drawer is below the goal cabinet and above the starting counter.
+- No drawer's path overlaps a cabinet.
+
+#### R16 — Drawers move horizontally back and forth
+- Each update while `PLAYING` moves a drawer by `speed × dt` in its direction.
+- It reverses at `min_x` and `max_x` and never leaves its range.
+- Its `y` never changes.
+- The same number of updates always gives the same positions.
+- Drawers don't move in `WON` or `LOST`.
+
+#### R17 — Drawers are one-way platforms
+- Albert lands on a drawer from above: feet snap to its top, vertical velocity becomes 0 and he counts as standing.
+- He can jump up through a drawer from below.
+- A drawer never pushes him from the side.
+- He falls if he walks off a drawer or it slides out from under him.
+- A fast fall can't pass through a drawer.
+
+#### R18 — Albert rides a moving drawer
+- While he stands on a drawer, his x changes by the drawer's movement that frame.
+- Left/right input adds to that movement.
+- He isn't carried while in the air, and his jump doesn't keep the drawer's speed.
+- He is clamped at the tower walls, so a drawer can slide out from under him there.
+
+#### R19 — The route requires timed drawer jumps
+- Without the drawers, the cabinets can't be climbed to the goal.
+- With each drawer somewhere along its path, the route can be climbed.
+- At one end of its path each drawer is within jump reach of the cabinet below it; at the other end it is out of reach.
+- In the default level, a jump onto each drawer, and from each drawer to the next cabinet, succeeds at some moments and fails at others.
+
+#### R20 — Drawers don't change the win, lose, treat or restart rules
+- Landing on a drawer never wins.
+- Falling off a drawer and out of the world loses (R4).
+- Treats and the HUD aren't affected by drawers.
+- Restarting after a win or a loss resets the drawers; pressing restart during `PLAYING` still does nothing.
+- Playing never changes the level's drawer definitions.
+
+### 9.4 Automated test plan (Round 3)
+| Requirement | Test file | What the tests check |
+|---|---|---|
+| R15 | `tests/test_drawer_placement.py` | Exactly 2 drawers; paths inside the world; below the goal and above the counter; no overlap with cabinets; drawer-sized |
+| R16 | `tests/test_drawer_motion.py` | speed × dt per update; reverses at both ends; never out of range; fixed y; deterministic; frozen in WON and LOST |
+| R17 | `tests/test_drawer_platforms.py` | Landing snaps to the top; jumping through from below; no side push; falling when it slides away or Albert walks off; no tunnelling on a fast fall |
+| R18 | `tests/test_drawer_ride.py` | Carried while standing; input adds to the carry; not carried in the air; no inherited speed; clamped at the walls |
+| R19 | `tests/test_drawer_route.py` | Not climbable without drawers; climbable with them; reach changes along each path; simulated jumps succeed at some moments and fail at others |
+| R20 | `tests/test_drawer_restart.py` | Drawer never wins; falling off loses; restart resets drawers; nothing during PLAYING; level data unchanged; treats unaffected |
+| R3 (updated) | `tests/test_platforms.py` | The climbability test counts drawers as route stops |
+| R7 (extended) | `tests/test_art_style.py` | `"drawer"` is a required sprite (palette, colour-count and transparency checks) and matches the drawer size |
 
 No new modules are added; section 7's layout still applies, plus the six test files above.

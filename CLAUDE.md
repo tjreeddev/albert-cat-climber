@@ -6,11 +6,12 @@ CSC299 project: a small 16-bit-style pixel-art platformer where Albert, the deve
 - `problem.md`: the original problem statement and requirements R1–R8. Don't edit it.
 - `spec.md`: the detailed spec with decisions, defaults and acceptance criteria. Follow it. If something is ambiguous or seems to need a change, ask the user before departing from it.
 
-## Scope rules (Rounds 1–2)
-- Implement only what R1–R14 and `spec.md` require. R1–R8 (Round 1) are unchanged by Round 2.
+## Scope rules (Rounds 1–3)
+- Implement only what R1–R20 and `spec.md` require. R1–R8 (Round 1) are unchanged by Round 2; R1–R14 behaviour is unchanged by Round 3.
 - Round 2 adds one feature: optional cat treats (R9–R14, `spec.md` section 8). Cat treats are the only collectible.
-- Do **not** add other collectibles, enemies, moving platforms, multiple levels, lives, checkpoints, sound or music, power-ups, points/score, timers, extra menus or other features unless the user asks. The treat count is not a score.
-- Don't change the Round 1 cabinet layout.
+- Round 3 adds one feature: two horizontally moving cabinet drawers (R15–R20, `spec.md` section 9). They are the only moving platforms.
+- Do **not** add other collectibles, enemies, other moving platforms, multiple levels, lives, checkpoints, sound or music, power-ups, points/score, timers, extra menus or other features unless the user asks. The treat count is not a score.
+- Don't change the cabinet layout beyond the approved Round 3 change (cabinets 4 and 8 replaced by drawers).
 - Keep the code small and readable.
 
 ## Workflow
@@ -37,7 +38,9 @@ CSC299 project: a small 16-bit-style pixel-art platformer where Albert, the deve
 - Use a fixed timestep of 60 updates per second. Physics constants live in `config.py`.
 - Cabinets are one-way platforms (they collide only when landing from above).
 - Losing means falling below the world's bottom; there is no floor. Winning means landing on the highest cabinet.
-- Treats: `level.py` holds fixed treat positions (`Level.treats`); `game.py` tracks which were collected this run, and `restart()` clears that. Each update runs physics, then collects treats, then checks lose/win.
+- Treats: `level.py` holds fixed treat positions (`Level.treats`); `game.py` tracks which were collected this run, and `restart()` clears that.
+- Drawers: `level.py` holds fixed drawer definitions (`Level.drawers`, separate from `Level.platforms`); `game.py` keeps their moving state (`Game.drawers`) and `restart()` resets it. Drawers are one-way platforms and carry Albert while he stands on them.
+- Each update while playing: move drawers and carry Albert, then physics, then collect treats, then check lose/win.
 
 ## Art style (R7)
 - Draw to a 320×180 internal surface, then scale it up by a whole number (×4) with nearest-neighbour filtering. Never use smooth scaling.
@@ -45,6 +48,6 @@ CSC299 project: a small 16-bit-style pixel-art platformer where Albert, the deve
 - Albert is a black cat. Give him a dark outline or highlight colour so he stands out against the cabinets and wall.
 
 ## Testing conventions
-- One test file per requirement: `tests/test_movement.py` (R1), `test_jump_gravity.py` (R2), `test_platforms.py` (R3), `test_lose.py` (R4), `test_win.py` (R5), `test_restart.py` (R6), `test_art_style.py` (R7), `test_runs_locally.py` (R8), `test_treat_placement.py` (R9), `test_treat_collect.py` (R10), `test_treat_count.py` (R11), `test_hud.py` (R12), `test_treat_restart.py` (R13), `test_treats_optional.py` (R14).
+- One test file per requirement: `tests/test_movement.py` (R1), `test_jump_gravity.py` (R2), `test_platforms.py` (R3), `test_lose.py` (R4), `test_win.py` (R5), `test_restart.py` (R6), `test_art_style.py` (R7), `test_runs_locally.py` (R8), `test_treat_placement.py` (R9), `test_treat_collect.py` (R10), `test_treat_count.py` (R11), `test_hud.py` (R12), `test_treat_restart.py` (R13), `test_treats_optional.py` (R14), `test_drawer_placement.py` (R15), `test_drawer_motion.py` (R16), `test_drawer_platforms.py` (R17), `test_drawer_ride.py` (R18), `test_drawer_route.py` (R19), `test_drawer_restart.py` (R20).
 - Name each test or docstring after the requirement it covers, e.g. `test_r4_falling_below_world_loses`.
 - Test logic through the pure modules; only the R7, R8 and R12 (HUD drawing) tests touch Pygame.

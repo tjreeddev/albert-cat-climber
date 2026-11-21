@@ -108,11 +108,17 @@ def test_r3_default_level_starts_standing_on_the_lowest_cabinet():
 
 
 def test_r3_default_level_is_climbable():
-    """Each cabinet, bottom to top, is reachable with one jump from the one below."""
-    from albert.level import build_level
+    """Each cabinet, bottom to top, is reachable with one jump from the one below.
+
+    Round 3: each moving drawer counts as a route stop anywhere along its path.
+    """
+    from albert.level import Platform, build_level
 
     level = build_level()
-    route = sorted(level.platforms, key=lambda p: p.y, reverse=True)
+    stops = list(level.platforms) + [
+        Platform(d.min_x, d.y, d.max_x + d.width - d.min_x, d.height) for d in level.drawers
+    ]
+    route = sorted(stops, key=lambda p: p.y, reverse=True)
     rise_limit = max_jump_height() * 0.9  # keep a safety margin
     reach_limit = config.MOVE_SPEED * (config.JUMP_VELOCITY / config.GRAVITY)
 

@@ -10,7 +10,7 @@ import pytest
 from albert import config
 
 CAT_FRAMES = ["cat_idle", "cat_walk_1", "cat_walk_2", "cat_jump"]
-REQUIRED_SPRITES = CAT_FRAMES + ["cabinet", "background", "treat"]  # "treat": Round 2
+REQUIRED_SPRITES = CAT_FRAMES + ["cabinet", "background", "treat", "drawer"]  # treat: R2, drawer: R3
 
 
 @pytest.fixture(scope="module")
@@ -85,6 +85,11 @@ def test_r7_cat_frames_match_albert_size(sprites, name):
 def test_r7_treat_sprite_matches_treat_hitbox(sprites):
     """Round 2: the treat sprite follows R7 and matches its 8x8 hitbox."""
     assert sprites["treat"].get_size() == (config.TREAT_SIZE, config.TREAT_SIZE)
+
+
+def test_r7_drawer_sprite_matches_drawer_size(sprites):
+    """Round 3: the drawer sprite follows R7 and matches the drawer's 32x16 size."""
+    assert sprites["drawer"].get_size() == (config.DRAWER_WIDTH, config.DRAWER_HEIGHT)
 
 
 def test_r7_albert_is_a_black_cat_with_a_visible_highlight(sprites):
