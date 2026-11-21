@@ -1,10 +1,10 @@
-# Albert Cat Climber — Specification (Rounds 1–3)
+# Albert Cat Climber — Specification (Rounds 1–4)
 
 ## 1. Overview
 
 Albert Cat Climber is a small 2D platformer based on the developer's black cat, Albert. The player guides Albert up a tower of kitchen cabinets. The goal is to reach the highest cabinet without falling.
 
-Round 1 is deliberately small. It covers only the requirements R1–R8 from `problem.md`. Round 2 adds one feature, optional cat treats (R9–R14), described in section 8. R1–R8 are unchanged. Round 3 adds one feature, two horizontally moving cabinet drawers (R15–R20), described in section 9. R1–R14 behaviour is unchanged; the only Round 1 change is that two route cabinets become drawers (section 9.1).
+Round 1 is deliberately small. It covers only the requirements R1–R8 from `problem.md`. Round 2 adds one feature, optional cat treats (R9–R14), described in section 8. R1–R8 are unchanged. Round 3 adds one feature, two horizontally moving cabinet drawers (R15–R20), described in section 9. R1–R14 behaviour is unchanged; the only Round 1 change is that two route cabinets become drawers (section 9.1). Round 4 replaces the compact tower with a large kitchen level, a camera that scrolls on both axes, and a longer route through four progressively harder sections (R21–R26), described in section 10. Albert's physics and the R1–R20 rules are unchanged; the level size, layout and the treat and drawer counts are revised (section 10.1).
 
 ## 2. Scope
 
@@ -20,7 +20,7 @@ Round 1 is deliberately small. It covers only the requirements R1–R8 from `pro
 ### Out of scope (Round 1)
 Collectibles, enemies, moving platforms, multiple levels, sound or music, power-ups, score/timer, menus beyond the win/lose overlay, save data, and anything else not required by `problem.md`.
 
-Round 2 lifts the "collectibles" exclusion for cat treats only (section 8). Round 3 lifts the "moving platforms" exclusion for two horizontally moving drawers only (section 9). Everything else above stays out of scope.
+Round 2 lifts the "collectibles" exclusion for cat treats only (section 8). Round 3 lifts the "moving platforms" exclusion for horizontally moving drawers only (section 9; six of them from Round 4). Everything else above stays out of scope.
 
 ## 3. Technical decisions
 
@@ -38,6 +38,8 @@ Round 2 lifts the "collectibles" exclusion for cat treats only (section 8). Roun
 ## 4. Gameplay rules
 
 ### 4.1 World and camera
+> **Revised in Round 4 (section 10):** the world is now 960×1080 with a four-section route, and the camera scrolls horizontally as well as vertically. The size and cabinet-count limits below applied to Rounds 1–3 only.
+
 - The level is one vertical tower about 2–3 screens tall (roughly 360–540 world pixels) with about 10–12 cabinet platforms.
 - Albert starts on a low counter at the bottom of the tower.
 - There is **no floor** below the starting counter.
@@ -169,7 +171,7 @@ requirements.txt
 ### 8.3 Requirements and acceptance criteria
 
 #### R9 — Cat treats are placed on selected cabinets
-- The default level has exactly 5 treats.
+- The default level has exactly 5 treats. *(Revised in Round 4: 12 treats, see R24.)*
 - Each treat rests on top of a cabinet and lies horizontally within it.
 - No treat is on the starting counter or the goal cabinet, and no two treats share a cabinet.
 - All treats are inside the world bounds and are `TREAT_SIZE`×`TREAT_SIZE`.
@@ -240,7 +242,7 @@ No new modules are added; section 7's layout still applies, plus the six test fi
 ### 9.3 Requirements and acceptance criteria
 
 #### R15 — The level has two moving drawers
-- The default level has exactly 2 drawers.
+- The default level has exactly 2 drawers. *(Revised in Round 4: 6 drawers, see R25.)*
 - Each drawer's whole path (from `min_x` to `max_x + width`) is inside the world.
 - Each drawer is below the goal cabinet and above the starting counter.
 - No drawer's path overlaps a cabinet.
@@ -266,6 +268,7 @@ No new modules are added; section 7's layout still applies, plus the six test fi
 - He is clamped at the tower walls, so a drawer can slide out from under him there.
 
 #### R19 — The route requires timed drawer jumps
+*(Revised in Round 4: "the cabinet below/above" a drawer now means its previous/next stop on `Level.route`, see R25.)*
 - Without the drawers, the cabinets can't be climbed to the goal.
 - With each drawer somewhere along its path, the route can be climbed.
 - At one end of its path each drawer is within jump reach of the cabinet below it; at the other end it is out of reach.
@@ -291,3 +294,100 @@ No new modules are added; section 7's layout still applies, plus the six test fi
 | R7 (extended) | `tests/test_art_style.py` | `"drawer"` is a required sprite (palette, colour-count and transparency checks) and matches the drawer size |
 
 No new modules are added; section 7's layout still applies, plus the six test files above.
+
+## 10. Round 4 — Large kitchen level and two-axis camera (R21–R26)
+
+### 10.1 Scope
+- **In scope:**
+  - a much larger kitchen level (960×1080, 3 screens wide × 6 tall);
+  - a camera that scrolls horizontally and vertically;
+  - a longer route through four progressively harder sections that reuses cabinets, treats and drawers;
+  - 12 treats and 6 drawers.
+- **Out of scope:** enemies, checkpoints, lives, vertical or other moving platforms, multiple levels, points/score, timers, sound or music, a minimap, camera smoothing or dead-zones, section banners or wall tints, extra menus, and any other feature not listed here.
+- **Revisions to earlier rounds (approved):**
+  - Section 4.1's "one vertical tower 2–3 screens tall with 10–12 cabinets" is replaced by R21. The R3 tests for those limits are removed.
+  - The Round 1–3 layout (`_TOWER`, `_DRAWERS`, `_TREATS`) is replaced by the Round 4 layout.
+  - R9's count of 5 treats becomes 12 (R24). All other R9 placement rules still apply.
+  - R15's count of 2 drawers becomes 6 (R25). All other R15 rules still apply.
+  - In R19, "the cabinet below/above a drawer" now means the drawer's previous/next stop on `Level.route`.
+  - The R3 climbability check walks `Level.route` in order, instead of sorting cabinets by height, and uses the rise-dependent jump reach from section 10.2.
+- **Unchanged:**
+  - Albert's physics: `MOVE_SPEED` 100, `GRAVITY` 900, `JUMP_VELOCITY` 320, `MAX_FALL_SPEED` 400, and `physics.py` behaviour.
+  - The R1–R20 rules: one-way platforms, win by landing on the highest cabinet, lose when falling below the world, restart, treat collection, the HUD, drawer motion and riding.
+  - R7's 320×180 canvas with ×4 nearest-neighbour scaling, and the palette.
+
+### 10.2 Decisions
+| Topic | Decision |
+|---|---|
+| World | 960×1080 world pixels (`level.WORLD_WIDTH`, `level.WORLD_HEIGHT`). The world's left and right edges are the walls. There is no floor. |
+| Start / goal | Albert starts on the counter `(16, 1060)`, 80×16, at the bottom-left. The goal is still the highest cabinet, `(100, 24)`, 40×16, near the top-left. |
+| Route | `Level.route` lists every stop on the intended route in order, from the counter to the goal: cabinets (`Platform`) and `Drawer` definitions. It snakes up the kitchen. S1 runs right along the bottom, S2 runs left, S3 runs right, and S4 runs left to the goal. |
+| Sections | `Platform` and `Drawer` gain a `section` field (default 1). Every route stop and side cabinet is tagged 1–4. |
+| Side cabinets | Two short off-route cabinets (one in S3, one in S4) each hold a treat that needs a detour. They are the only cabinets not on the route. |
+| Difficulty | Per section (route stops only):<br>• S1: cabinets 48–80 wide, gaps ≤ 22, rises ≤ 26, no drawers.<br>• S2: cabinets 32–40 wide, gaps ≤ 32, rises ≤ 36, 1 drawer at 35 px/s.<br>• S3: cabinets 24–32 wide, gaps ≤ 40, rises ≤ 40, 2 drawers at 45 px/s.<br>• S4: cabinets 24–40 wide, gaps ≤ 44, rises ≤ 42, 3 drawers at 50–55 px/s, including one drawer-to-drawer hop. |
+| Jump reach (tests) | The rise limit is 0.9 × the max jump height (≈ 51 px). For a rise `r` (negative for a drop), horizontal reach = `margin × MOVE_SPEED × (v + √(v² − 2·GRAVITY·r)) / GRAVITY`, where `v = JUMP_VELOCITY`. Climbing checks use margin 0.85; "can't reach" checks use margin 1.0. |
+| Camera | `Game.camera_x` and `Game.camera_y` centre Albert's hitbox on the 320×180 screen. Each axis is clamped to `[0, world size − screen size]`. Both are set on `restart()` and after every `update()`, with no smoothing. |
+| Rendering | Every world object (wallpaper, cabinets, drawers, treats, Albert) is drawn offset by `(camera_x, camera_y)`. The wallpaper tiles on both axes. Objects outside the screen are skipped. The HUD and overlays stay fixed to the screen. |
+| Treats | 12 treats: 2 in S1, 3 in S2, 3 in S3 (one on a side cabinet) and 4 in S4 (one on a side cabinet). Later sections put them on cabinet edges and side cabinets. |
+| Drawers | 6 drawers: 0 in S1, 1 in S2, 2 in S3 and 3 in S4. They are 32×16, horizontal only, and follow the Round 3 motion, collision and riding rules. Speed is set per drawer and is always below `MOVE_SPEED`. |
+
+### 10.3 Requirements and acceptance criteria
+
+#### R21 — The level is a large kitchen spanning several screens in both directions
+- The default world is 960×1080: at least 3 screens wide and 6 screens tall.
+- Albert starts standing on the lowest cabinet, in the left third of the world.
+- The goal is the unique highest cabinet.
+- Every cabinet, drawer path and treat lies inside the world.
+
+#### R22 — The camera scrolls horizontally and vertically
+- When Albert is far from the world's edges, the camera centres his hitbox on both axes.
+- The camera never shows anything outside the world on any of the four edges.
+- When Albert moves along x or y, the camera follows on that axis.
+- The camera is still valid (clamped, and centred where possible) in `WON` and `LOST`.
+- `restart()` restores both axes to the starting view. Pressing restart during `PLAYING` doesn't change them.
+- The HUD stays fixed to the screen whatever the camera position (R12).
+
+#### R23 — The route runs through four progressively harder sections
+- `Level.route` starts at the counter and ends at the goal. Its stops' sections run 1, 2, 3, 4 in order and never go back.
+- Each stop on the route can be reached from the previous one: the rise is within the rise limit and the gap is within the reach for that rise. A drawer counts anywhere along its path.
+- From one section to the next:
+  - the largest gap and the largest rise never decrease;
+  - the narrowest cabinet never gets wider;
+  - the number of drawers and the fastest drawer speed never decrease;
+  - each section is strictly harder than the one before on at least one of these.
+- Over all cabinets, with drops allowed and full reach, the goal can't be reached without drawers but can be reached with them.
+
+#### R24 — Treats are spread across the whole level
+- The default level has exactly 12 treats: 2, 3, 3 and 4 in sections 1–4.
+- R9's placement rules still hold.
+- Each side cabinet holds a treat and can be reached from the route.
+- R10–R14 are unchanged. The HUD shows `0/12` at the start.
+
+#### R25 — Drawers recur throughout the level
+- The default level has exactly 6 drawers: 0, 1, 2 and 3 in sections 1–4.
+- Drawer speeds don't decrease from one section to the next, and every speed is above 0 and below `MOVE_SPEED`.
+- Section 4 contains a drawer that directly follows another drawer on the route.
+- R15–R19 still hold for each drawer, using its route neighbours:
+  - when the previous (or next) stop is a cabinet, the drawer is in reach of it at one end of its path only;
+  - a jump onto each drawer, and a jump off it to the next stop, each succeed at some moments and fail at others.
+
+#### R26 — Earlier rules are unchanged by the bigger level
+- The physics constants keep their Round 1 values.
+- In the default level:
+  - landing on the goal wins;
+  - falling from a higher section onto a lower cabinet isn't a loss;
+  - falling below y = 1080 loses.
+- Restarting after a win or a loss resets Albert, both camera axes, the treats and the drawers.
+
+### 10.4 Automated test plan (Round 4)
+| Requirement | Test file | What the tests check |
+|---|---|---|
+| R21 | `tests/test_level_size.py` | 960×1080 world; ≥ 3×6 screens; start on the lowest cabinet at the left; unique highest goal; everything inside the world |
+| R22 | `tests/test_camera.py` | Centred away from the edges; clamped at all four edges; follows on x and y; valid in WON/LOST; restart restores both axes |
+| R23 | `tests/test_level_route.py` | Route starts at the counter and ends at the goal; sections in order; consecutive stops reachable; difficulty metrics are monotone and strictly increase; cabinets-only search can't reach the goal, but can with drawers |
+| R24 | `tests/test_level_treats.py` | 12 treats; 2/3/3/4 per section; side cabinets hold treats and are reachable; HUD starts at `0/12` |
+| R25 | `tests/test_level_drawers.py` | 6 drawers; 0/1/2/3 per section; speeds monotone and below MOVE_SPEED; a drawer-to-drawer hop in S4 |
+| R26 | `tests/test_round4_rules.py` | Physics constants pinned; winning on the goal; falling to a lower section isn't a loss; falling out of the world loses; restart resets everything |
+| R3, R6, R9, R11, R13, R15, R19 (revised) | existing files | Climbability walks `Level.route` with rise-dependent reach (the 10–12-cabinet and 2–3-screen tests are removed); the restart snapshot includes `camera_x`; treat and drawer counts become 12 and 6; R19 uses route neighbours, loops over all drawers and samples each drawer's full cycle |
+
+No new modules are added. The shared jump-reach helpers live in `tests/conftest.py`.

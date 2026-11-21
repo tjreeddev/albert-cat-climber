@@ -6,7 +6,7 @@ import pytest
 
 def snapshot(game):
     p = game.player
-    return (p.x, p.y, p.vx, p.vy, p.on_ground, game.camera_y)
+    return (p.x, p.y, p.vx, p.vy, p.on_ground, game.camera_x, game.camera_y)
 
 
 def lose(game, run_frames):

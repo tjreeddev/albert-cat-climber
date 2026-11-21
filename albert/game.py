@@ -39,7 +39,7 @@ class Game:
         )
         self.state = GameState.PLAYING
         self.collected = set()  # R10/R13: treats collected this run
-        self.camera_y = self._camera_target()
+        self.camera_x, self.camera_y = self._camera_target()  # R22
 
     def update(self, inputs, dt):
         if self.state != GameState.PLAYING:
@@ -62,7 +62,7 @@ class Game:
         elif landed is self.level.goal_platform:  # R5: landed on the highest cabinet
             self.state = GameState.WON
 
-        self.camera_y = self._camera_target()
+        self.camera_x, self.camera_y = self._camera_target()
 
     @property
     def treats_collected(self):
@@ -93,10 +93,15 @@ class Game:
                 self.collected.add(t)
 
     def _camera_target(self):
-        """Centre Albert vertically, clamped to the world."""
-        target = self.player.y + self.player.height / 2 - config.INTERNAL_HEIGHT / 2
-        lowest = max(0, self.level.world_height - config.INTERNAL_HEIGHT)
-        return min(max(target, 0), lowest)
+        """R22: centre Albert on both axes, each clamped to the world. Returns (x, y)."""
+        p = self.player
+        x = _clamp(p.x + p.width / 2 - config.INTERNAL_WIDTH / 2, self.level.world_width - config.INTERNAL_WIDTH)
+        y = _clamp(p.y + p.height / 2 - config.INTERNAL_HEIGHT / 2, self.level.world_height - config.INTERNAL_HEIGHT)
+        return x, y
+
+
+def _clamp(value, highest):
+    return min(max(value, 0), max(0, highest))
 
 
 def hud_text(game):

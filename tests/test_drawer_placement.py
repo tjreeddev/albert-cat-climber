@@ -1,4 +1,4 @@
-"""R15 — The level has two moving drawers."""
+"""R15 — The level has moving drawers (two in Round 3, six from Round 4)."""
 
 from albert import config
 
@@ -20,8 +20,9 @@ def overlaps(a, b):
     return ax < bx + bw and ax + aw > bx and ay < by + bh and ay + ah > by
 
 
-def test_r15_default_level_has_two_drawers():
-    assert len(default_level().drawers) == 2
+def test_r15_default_level_has_six_drawers():
+    """Revised in Round 4 (spec.md 10.1): 2 drawers became 6."""
+    assert len(default_level().drawers) == 6
 
 
 def test_r15_drawers_are_drawer_size():

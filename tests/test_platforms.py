@@ -73,19 +73,8 @@ def test_r3_walking_off_an_edge_starts_a_fall(make_game, run_frames):
     assert game.player.y > y0
 
 
-# --- Default level layout (spec.md 4.1 and R3 climbability) ---
-
-
-def test_r3_default_level_has_10_to_12_cabinets():
-    from albert.level import build_level
-
-    assert 10 <= len(build_level().platforms) <= 12
-
-
-def test_r3_default_level_is_two_to_three_screens_tall():
-    from albert.level import build_level
-
-    assert 360 <= build_level().world_height <= 540
+# --- Default level layout (R3 climbability). Round 4 (spec.md 10.1) replaced the
+# 10-12 cabinet / 2-3 screen limits of section 4.1 with R21. ---
 
 
 def test_r3_default_level_cabinets_are_inside_the_world():
@@ -108,22 +97,18 @@ def test_r3_default_level_starts_standing_on_the_lowest_cabinet():
 
 
 def test_r3_default_level_is_climbable():
-    """Each cabinet, bottom to top, is reachable with one jump from the one below.
+    """Each stop on the route is reachable with one jump from the previous one.
 
     Round 3: each moving drawer counts as a route stop anywhere along its path.
+    Round 4: the route is `Level.route` in order (it runs sideways as well as up),
+    and reach depends on the rise (spec.md 10.2).
     """
-    from albert.level import Platform, build_level
+    from albert.level import build_level
+    from conftest import RISE_LIMIT, jump_reach, side_gap
 
-    level = build_level()
-    stops = list(level.platforms) + [
-        Platform(d.min_x, d.y, d.max_x + d.width - d.min_x, d.height) for d in level.drawers
-    ]
-    route = sorted(stops, key=lambda p: p.y, reverse=True)
-    rise_limit = max_jump_height() * 0.9  # keep a safety margin
-    reach_limit = config.MOVE_SPEED * (config.JUMP_VELOCITY / config.GRAVITY)
-
-    for lower, upper in zip(route, route[1:]):
-        rise = lower.y - upper.y
-        gap = max(0, upper.x - (lower.x + lower.width), lower.x - (upper.x + upper.width))
-        assert rise <= rise_limit, f"cabinet at y={upper.y} is too high above y={lower.y}"
-        assert gap <= reach_limit, f"cabinet at y={upper.y} is too far sideways from y={lower.y}"
+    route = build_level().route
+    assert len(route) >= 2
+    for a, b in zip(route, route[1:]):
+        rise = a.y - b.y
+        assert rise <= RISE_LIMIT, f"stop at y={b.y} is too high above y={a.y}"
+        assert side_gap(a, b) <= jump_reach(rise), f"stop at y={b.y} is too far sideways from y={a.y}"

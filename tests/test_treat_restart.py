@@ -53,7 +53,7 @@ def test_r13_restart_after_winning_restores_treats(default_game, run_frames):
     from albert.game import GameState
 
     collect(default_game, run_frames, default_game.level.treats)
-    assert default_game.treats_collected == 5
+    assert default_game.treats_collected == default_game.treats_total
     win(default_game, run_frames)
     run_frames(default_game, 1, restart=True)
     assert default_game.state == GameState.PLAYING
@@ -65,7 +65,7 @@ def test_r13_restart_key_during_play_keeps_treats(default_game, run_frames):
     collect(default_game, run_frames, default_game.level.treats[:1])
     run_frames(default_game, 1, restart=True)
     assert default_game.treats_collected == 1
-    assert len(default_game.visible_treats()) == 4
+    assert len(default_game.visible_treats()) == default_game.treats_total - 1
 
 
 def test_r13_treats_can_be_collected_again_after_restart(default_game, run_frames):

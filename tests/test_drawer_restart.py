@@ -116,7 +116,8 @@ def test_r20_drawers_do_not_affect_treats_or_hud(default_game, run_frames):
     from albert.game import hud_text
 
     run_frames(default_game, 300)
-    assert default_game.treats_total == 5
+    total = len(default_game.level.treats)
+    assert default_game.treats_total == total
     assert default_game.treats_collected == 0
     assert default_game.visible_treats() == default_game.level.treats
-    assert hud_text(default_game) == "0/5"
+    assert hud_text(default_game) == f"0/{total}"

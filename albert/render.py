@@ -62,30 +62,38 @@ def _draw_hud(canvas, game, sprites):
 
 def draw(canvas, game, sprites):
     """Draw one frame of `game` onto the 320x180 internal canvas."""
-    cam = round(game.camera_y)
+    cam_x, cam_y = round(game.camera_x), round(game.camera_y)  # R22: scrolls on both axes
+    screen = canvas.get_rect()
 
-    # Wallpaper, scrolled with the camera.
+    def on_screen(thing):
+        return pygame.Rect(round(thing.x) - cam_x, round(thing.y) - cam_y, round(thing.width), round(thing.height))
+
+    # Wallpaper, scrolled with the camera on both axes.
     bg = sprites["background"]
-    offset = -(cam % bg.get_height())
-    _tile(canvas, bg, pygame.Rect(0, offset, config.INTERNAL_WIDTH, config.INTERNAL_HEIGHT - offset))
+    ox, oy = -(cam_x % bg.get_width()), -(cam_y % bg.get_height())
+    _tile(canvas, bg, pygame.Rect(ox, oy, config.INTERNAL_WIDTH - ox, config.INTERNAL_HEIGHT - oy))
 
     # Cabinets.
     for p in game.level.platforms:
-        rect = pygame.Rect(round(p.x), round(p.y) - cam, round(p.width), round(p.height))
-        if rect.colliderect(canvas.get_rect()):
+        rect = on_screen(p)
+        if rect.colliderect(screen):
             _tile(canvas, sprites["cabinet"], rect)
 
     # Moving drawers (R15), at their current positions.
     for d in game.drawers:
-        canvas.blit(sprites["drawer"], (round(d.x), round(d.y) - cam))
+        rect = on_screen(d)
+        if rect.colliderect(screen):
+            canvas.blit(sprites["drawer"], rect)
 
     # Treats not yet collected this run (R10).
     for t in game.visible_treats():
-        canvas.blit(sprites["treat"], (round(t.x), round(t.y) - cam))
+        rect = on_screen(t)
+        if rect.colliderect(screen):
+            canvas.blit(sprites["treat"], rect)
 
     # Albert.
     player = game.player
-    canvas.blit(_cat_frame(player, sprites), (round(player.x), round(player.y) - cam))
+    canvas.blit(_cat_frame(player, sprites), on_screen(player))
 
     _draw_hud(canvas, game, sprites)
 

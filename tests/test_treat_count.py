@@ -12,7 +12,7 @@ def test_r11_count_starts_at_zero(default_game):
 
 
 def test_r11_total_is_the_number_of_treats_in_the_level(default_game):
-    assert default_game.treats_total == len(default_game.level.treats) == 5
+    assert default_game.treats_total == len(default_game.level.treats) == 12  # Round 4: was 5
 
 
 def test_r11_count_goes_up_by_one_per_treat(make_game, run_frames):

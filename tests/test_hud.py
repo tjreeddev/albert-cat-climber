@@ -37,7 +37,7 @@ def hud_pixels(game, sprites):
 def test_r12_hud_text_shows_collected_over_total(default_game):
     from albert.game import hud_text
 
-    assert hud_text(default_game) == "0/5"
+    assert hud_text(default_game) == "0/12"  # Round 4: 12 treats (was 0/5)
 
 
 def test_r12_hud_text_updates_when_a_treat_is_collected(make_game, run_frames):
@@ -82,6 +82,7 @@ def test_r12_hud_is_fixed_to_the_screen_not_the_camera(default_game, sprites):
     goal = default_game.level.goal_platform
     default_game.player.x, default_game.player.y = goal.x, goal.y - config.PLAYER_HEIGHT
     default_game.camera_y = 0
+    default_game.camera_x = default_game.level.world_width - config.INTERNAL_WIDTH  # Round 4: x scrolls too
     assert hud_pixels(default_game, sprites) == at_bottom
 
 

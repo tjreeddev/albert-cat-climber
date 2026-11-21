@@ -17,8 +17,9 @@ def cabinet_under(level, treat):
     return None
 
 
-def test_r9_default_level_has_five_treats():
-    assert len(default_level().treats) == 5
+def test_r9_default_level_has_twelve_treats():
+    """Revised in Round 4 (spec.md 10.1): 5 treats became 12."""
+    assert len(default_level().treats) == 12
 
 
 def test_r9_treats_are_treat_size():
