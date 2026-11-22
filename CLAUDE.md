@@ -3,7 +3,7 @@
 CSC299 project: a small 16-bit-style pixel-art platformer where Albert, the developer's black cat, climbs kitchen cabinets to reach the top.
 
 ## Source of truth
-- `problem.md`: the original problem statement and requirements R1–R8. Don't edit it.
+- `problem.md`: the problem statement, the initial requirements R1–R8 and a `## Round N requirements` section for each later round. Keep R1–R8 wording as originally written. Add each new round's requirements there (and in `spec.md`), record revisions to earlier requirements by their existing IDs, and never renumber IDs.
 - `spec.md`: the detailed spec with decisions, defaults and acceptance criteria. Follow it. If something is ambiguous or seems to need a change, ask the user before departing from it.
 
 ## Scope rules (Rounds 1–7)

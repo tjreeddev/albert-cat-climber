@@ -77,4 +77,4 @@ The game was built in seven rounds, each written up as requirements and tests be
 6. **Kitchen hazards** with warning cycles and knockback.
 7. **The title menu** and controls screen.
 
-See `problem.md` for the original requirements and `spec.md` for the full specification.
+See `problem.md` for the problem statement and the requirements for every round (R1–R53), and `spec.md` for the full specification. Each round from Round 2 on also has a `handoff-round-N.md`, and `docs/decisions/` holds the design decision records. The handoffs and decision records were reconstructed after development.
