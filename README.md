@@ -1,38 +1,48 @@
 # Albert Cat Climber
 
-A small 16-bit-style pixel-art platformer starring Albert, a black cat, climbing the kitchen cabinets. Climb a big kitchen (3 screens wide and 6 tall) from the counter at the bottom-left to the highest cabinet near the top-left to win. If you fall below the bottom of the kitchen, you lose; falling back onto a lower cabinet is fine. CSC299 project, Rounds 1–4.
+A small 16-bit-style pixel-art platformer starring Albert, a black cat, climbing a kitchen's cabinets. Start on the counter at the bottom-left of a big kitchen and climb to the highest cabinet near the top-left to win. Fall below the bottom of the kitchen and you lose. Landing back on a lower cabinet is fine, so a slip costs you height, not the run. Built as a CSC299 project.
 
-The camera follows Albert both sideways and up and down. The route zig-zags through four sections, each harder than the last:
+## Features
 
-1. **Counter run** (heading right): wide cabinets with short hops.
-2. **Lower cabinets** (heading left): narrower cabinets, longer gaps and one slow drawer.
-3. **Upper cabinets** (heading right): narrow cabinets and two drawers.
-4. **Top shelves** (heading left): the narrowest cabinets, the longest gaps and three faster drawers, including a jump from one moving drawer straight onto another.
-
-Twelve fish-shaped cat treats are spread along the way. The later ones sit on cabinet edges or on small side cabinets that need a detour. Touch a treat to collect it; the counter in the top-left corner shows how many you have (e.g. `2/12`). Treats are optional: you can win without them. Restarting puts every treat back and resets the counter to zero.
-
-Six pulled-out drawers slide left and right. You can't skip them: each one is only within jumping range of the cabinet before it at one end of its slide, so wait for it to come close, jump on, ride it across, and jump off at the right moment.
-- Albert moves with a drawer while standing on it, and you can still walk on it.
-- He doesn't keep the drawer's movement once he jumps off.
-- If a drawer carries him into a wall, it slides out from under him.
-
-Restarting puts every drawer back where it started.
+- **Cabinet platforming.** Cabinets are one-way platforms: jump up through them from below and land on top.
+- **A big scrolling kitchen.** The kitchen is 3 screens wide and 6 tall, and the camera follows Albert both sideways and up and down. The route zig-zags through four sections, each harder than the last, with narrower cabinets, longer gaps and faster drawers as you climb.
+- **Cat treats.** Twelve fish-shaped treats are spread along the route, some on cabinet edges or side cabinets that need a detour. A counter in the corner shows how many you've collected. Treats are optional.
+- **Moving drawers.** Six pulled-out drawers slide back and forth. Albert rides them while standing on them, and you'll need to time your jumps on and off, including one jump from a moving drawer straight onto another.
+- **A living kitchen.**
+  - Large windows show an animated outdoor view that changes as you climb: a garden, then town rooftops with chimney smoke, then a city skyline with blinking lights, and finally open sky with birds.
+  - Curtains sway, clouds drift, mugs and pots steam, and appliance clocks blink.
+  - Albert kicks up a puff of dust when he lands, and treats sparkle when collected.
+- **Kitchen hazards.** Steam vents, hot burners and dripping taps run on fixed timing cycles and always flash a warning before they turn dangerous. Touching an active hazard doesn't end the run. It knocks Albert back with a short bounce and a moment without steering, then he flashes and is safe from hazards for a second. The real danger is being knocked off a ledge.
+- **Title menu.** Start a game, check the controls, or quit, all over the animated kitchen.
 
 ## Controls
+
+**Menu**
+
+| Action | Keys |
+|---|---|
+| Move the selection | ↑ ↓ or W / S |
+| Choose | Enter or Space |
+| Back (quits from the title menu) | Esc or Backspace |
+
+**In the game**
 
 | Action | Keys |
 |---|---|
 | Move left / right | ← → or A / D |
 | Jump | Space, ↑ or W |
 | Restart (on the win/lose screen) | R or Enter |
-| Quit | Esc or close the window |
+| Back to the menu (on the win/lose screen) | M |
+| Back to the menu (any time) | Esc |
+
+Closing the window quits at any time.
 
 ## Setup
 
-Requires **Python 3** (developed and tested with Python 3.14 on Windows). The only dependencies are in `requirements.txt`:
+Requires **Python 3** (developed and tested with Python 3.14 on Windows). The only dependencies are listed in `requirements.txt`:
 
-- `pygame-ce`: the Community Edition of Pygame. The code still uses `import pygame`. Don't also install classic `pygame`, which has no Python 3.14 wheels and conflicts with `pygame-ce`.
-- `pytest`: runs the automated tests.
+- `pygame-ce`, the Community Edition of Pygame. The code still uses `import pygame`. Don't also install classic `pygame`: it has no Python 3.14 wheels and conflicts with `pygame-ce`.
+- `pytest`, which runs the automated tests.
 
 From the project folder (Windows PowerShell or Command Prompt), run these once:
 
@@ -53,4 +63,18 @@ python -m venv .venv
 .venv\Scripts\python -m pytest
 ```
 
-The tests run without opening a window. There is one test file per requirement (R1–R26) in `tests/`. See `problem.md` for the requirements and `spec.md` for the full specification.
+There are **577 automated tests**, and all pass. They run headlessly, without opening a window. The tests in `tests/` are organised by requirement, R1–R53.
+
+## Development
+
+The game was built in seven rounds, each written up as requirements and tests before any code:
+
+1. **The core platformer**: movement, jumping, one-way cabinets, winning and losing, restart, and the pixel-art look.
+2. **Cat treats** and the treat counter.
+3. **Moving drawers** that Albert can ride.
+4. **The big kitchen**: a 960×1080 level, a camera that scrolls on both axes, and a four-section route.
+5. **Animation and scenery**: steaming decorations, landing dust, treat sparkles, and large windows with outdoor views that change with height.
+6. **Kitchen hazards** with warning cycles and knockback.
+7. **The title menu** and controls screen.
+
+See `problem.md` for the original requirements and `spec.md` for the full specification.
