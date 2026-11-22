@@ -1,10 +1,10 @@
-# Albert Cat Climber — Specification (Rounds 1–6)
+# Albert Cat Climber — Specification (Rounds 1–7)
 
 ## 1. Overview
 
 Albert Cat Climber is a small 2D platformer based on the developer's black cat, Albert. The player guides Albert up a tower of kitchen cabinets. The goal is to reach the highest cabinet without falling.
 
-Round 1 is deliberately small. It covers only the requirements R1–R8 from `problem.md`. Round 2 adds one feature, optional cat treats (R9–R14), described in section 8. R1–R8 are unchanged. Round 3 adds one feature, two horizontally moving cabinet drawers (R15–R20), described in section 9. R1–R14 behaviour is unchanged; the only Round 1 change is that two route cabinets become drawers (section 9.1). Round 4 replaces the compact tower with a large kitchen level, a camera that scrolls on both axes, and a longer route through four progressively harder sections (R21–R26), described in section 10. Albert's physics and the R1–R20 rules are unchanged; the level size, layout and the treat and drawer counts are revised (section 10.1). Round 5 adds visual-only kitchen animation and effects (R27–R32), described in section 11: looping decorations, landing dust and a treat sparkle. Gameplay is unchanged. Section 11.5 expands Round 5 with large background scenery (R33–R38): windows with animated outdoor views that change with height, curtains, plants, pictures and tiled panels. Round 6 adds 8 timed kitchen hazards (steam vents, hot burners and dripping taps) that knock Albert back (R39–R46), described in section 12. Physics, the layout, the camera and the win/lose rules are unchanged.
+Round 1 is deliberately small. It covers only the requirements R1–R8 from `problem.md`. Round 2 adds one feature, optional cat treats (R9–R14), described in section 8. R1–R8 are unchanged. Round 3 adds one feature, two horizontally moving cabinet drawers (R15–R20), described in section 9. R1–R14 behaviour is unchanged; the only Round 1 change is that two route cabinets become drawers (section 9.1). Round 4 replaces the compact tower with a large kitchen level, a camera that scrolls on both axes, and a longer route through four progressively harder sections (R21–R26), described in section 10. Albert's physics and the R1–R20 rules are unchanged; the level size, layout and the treat and drawer counts are revised (section 10.1). Round 5 adds visual-only kitchen animation and effects (R27–R32), described in section 11: looping decorations, landing dust and a treat sparkle. Gameplay is unchanged. Section 11.5 expands Round 5 with large background scenery (R33–R38): windows with animated outdoor views that change with height, curtains, plants, pictures and tiled panels. Round 6 adds 8 timed kitchen hazards (steam vents, hot burners and dripping taps) that knock Albert back (R39–R46), described in section 12. Physics, the layout, the camera and the win/lose rules are unchanged. Round 7 adds a title menu with START, CONTROLS and QUIT, shown at startup over the animated kitchen (R47–R53), described in section 13. Esc and M return to it from a game. The game itself is unchanged.
 
 ## 2. Scope
 
@@ -20,7 +20,7 @@ Round 1 is deliberately small. It covers only the requirements R1–R8 from `pro
 ### Out of scope (Round 1)
 Collectibles, enemies, moving platforms, multiple levels, sound or music, power-ups, score/timer, menus beyond the win/lose overlay, save data, and anything else not required by `problem.md`.
 
-Round 2 lifts the "collectibles" exclusion for cat treats only (section 8). Round 3 lifts the "moving platforms" exclusion for horizontally moving drawers only (section 9; six of them from Round 4). Round 5 adds non-interactive decorations and particle effects only (section 11). Round 6 adds timed, static kitchen hazards with knockback only (section 12). Enemies, lives and checkpoints stay out of scope. Everything else above stays out of scope.
+Round 2 lifts the "collectibles" exclusion for cat treats only (section 8). Round 3 lifts the "moving platforms" exclusion for horizontally moving drawers only (section 9; six of them from Round 4). Round 5 adds non-interactive decorations and particle effects only (section 11). Round 6 adds timed, static kitchen hazards with knockback only (section 12). Enemies, lives and checkpoints stay out of scope. Round 7 lifts the "menus beyond the win/lose overlay" exclusion for the title menu and controls screen only (section 13). Everything else above stays out of scope.
 
 ## 3. Technical decisions
 
@@ -53,7 +53,8 @@ Round 2 lifts the "collectibles" exclusion for cat treats only (section 8). Roun
 | Move right | → or D |
 | Jump | Space, ↑ or W |
 | Restart (only on the win/lose screen) | R or Enter |
-| Quit | Esc or closing the window |
+| Quit | Closing the window, or QUIT / Esc on the title menu (revised in Round 7, section 13) |
+| Back to the title menu (Round 7) | Esc during a game; M on the win/lose screen |
 
 ### 4.3 Game states
 - `PLAYING`: normal play; input moves Albert.
@@ -690,3 +691,101 @@ None of these overlaps a treat, decoration or drawer path. Per section, the shor
 | R46 | `tests/test_hazard_fairness.py` | Non-active run of at least 75; scripted crossing at every hazard over 3 cycles; earlier scenarios unchanged without hazards; physics pinned |
 
 `albert/hazards.py` is the only new module. It must not import pygame.
+
+## 13. Round 7 — Title menu (R47–R53)
+
+### 13.1 Scope
+- **In scope:**
+  - a title menu shown at startup, with START, CONTROLS and QUIT;
+  - a controls screen;
+  - returning to the menu with Esc during a game, or with M on the win/lose overlay;
+  - the animated kitchen as the menu's backdrop;
+  - full A–Z glyphs in the pixel font.
+- **Out of scope:** pausing, settings, options, level select, save data, high scores, sound or music, mouse input, transitions or fades, and anything else not listed here.
+- **Unchanged:** `Game` and everything inside it: physics, level, treats, drawers, scenery, hazards, camera, and win/lose/restart rules. A `Game` started from the menu behaves exactly like `Game()`. R1–R46 still hold.
+- **Approved revisions to earlier rounds:**
+  - The section 2 exclusion of "menus beyond the win/lose overlay" is lifted for this title menu and controls screen only.
+  - Section 4.2: **Esc no longer quits the game outright**, and M is added (table in 13.2).
+  - The R8 headless-run test drives the app through the menu, and `run()` returns the app instead of a `Game`.
+  - The win/lose overlay's hint text changes to `R RESTART   M MENU`.
+- **New module:** `albert/menu.py`, pure Python with no pygame. It holds `Keys`, `Screen`, `App` and `OPTIONS`.
+
+### 13.2 Decisions
+| Topic | Decision |
+|---|---|
+| Keys | `menu.Keys(left, right, up, down, jump, confirm, back, restart, menu)`: plain booleans that are true while held, all defaulting to `False`. |
+| Key mapping | `__main__.read_inputs(held)` returns `Keys`:<br>• left: ← / A<br>• right: → / D<br>• up: ↑ / W<br>• down: ↓ / S<br>• jump: Space / ↑ / W<br>• confirm: Enter / Space<br>• back: Esc / Backspace<br>• restart: R / Enter<br>• menu: M<br>Closing the window still quits at once. Esc is no longer handled by the event loop; the app decides what it does. |
+| Screens | `menu.Screen`: `MENU`, `CONTROLS` and `GAME`. `App()` starts on `MENU` with `selected` = 0, `game` = `None` and `quit_requested` = `False`. `OPTIONS = ("START", "CONTROLS", "QUIT")`. |
+| Presses | `App` keeps the previous update's `Keys`. A key is *pressed* on an update when it is held now and wasn't held on the previous update; the first update compares against all-released. Menu and screen actions react only to presses, so a held key acts once, and a key held across a screen change doesn't act again on the new screen. |
+| Update | `App.update(keys, dt)` handles exactly one screen per update: the screen that was showing when the update started. A screen change takes effect on the next update. |
+| MENU | Pressing up moves `selected` up by one, wrapping from 0 to 2. Pressing down moves it down, wrapping from 2 to 0. If both are pressed on the same update, nothing moves. Pressing confirm acts on the selected option:<br>• START creates a fresh `Game()` in `App.game`, switches to `GAME` and sets the start gate;<br>• CONTROLS switches to `CONTROLS`;<br>• QUIT sets `quit_requested`.<br>Pressing back sets `quit_requested`. |
+| CONTROLS | Pressing back or confirm returns to `MENU`, with `selected` unchanged (still CONTROLS). |
+| GAME | Pressing back, in any game state, returns to `MENU`: the game is discarded (`App.game = None`) and `selected` resets to 0. Pressing menu while the game is `WON` or `LOST` does the same; during `PLAYING` it does nothing. Otherwise the game is updated with `game.Inputs(left, right, jump, restart)` built from the held keys, so all R1–R46 rules apply unchanged. |
+| Start gate | After START, the game is updated with empty `Inputs()` until the first update on which no key is held. From that update on it gets the real inputs. Time still passes during the gate. This stops the Enter or Space that chose START from jumping or restarting at once. |
+| Backdrop | `App.backdrop` is a `Game()` created with the app. It is never updated. Each update on `MENU` or `CONTROLS` adds 1 to `backdrop.ticks`, so its scenery, decorations and curtains animate. Its hazards stay idle, because `hazard_ticks` stays at 0. |
+| Main loop | `__main__.run(max_frames=None, input_script=None)` drives an `App`. `input_script(frame)` returns `Keys`. The loop ends when the window closes, when `quit_requested` is set, or after `max_frames`. `run()` returns the `App`. |
+| Menu render | `render.draw_app(canvas, app, sprites)` draws the screen that is showing; `GAME` uses the existing `draw`.<br>On `MENU` and `CONTROLS`, the backdrop's world is drawn at its starting camera view without Albert, the HUD or an overlay. On top of it goes a solid `panel` box, 240×140 and centred, with a 2 px `cat_eye` border. |
+| MENU layout | • the title `ALBERT CAT CLIMBER` at scale 2 in `treat_light`, centred, top at y 30;<br>• Albert's `cat_idle` sprite, centred, top at y 46;<br>• the three options at scale 2, centred, tops at y 70, 92 and 114: the selected one in `cat_eye` with a `>` 12 px to its left, the others in `text_white`;<br>• the hint `UP DOWN  ENTER` at scale 1, centred, top at y 146. |
+| CONTROLS layout | • heading `CONTROLS` at scale 2, centred, top at y 30;<br>• five lines at scale 1 in `text_white`, left edge at x 56, tops at y 56 + 14·i: `MOVE    LEFT RIGHT / A D`, `JUMP    SPACE UP / W`, `RESTART R / ENTER`, `MENU    M / ESC`, `BACK    ESC`;<br>• the hint `ESC BACK`, centred, top at y 146. |
+| Overlay | The win/lose overlay's hint becomes `R RESTART   M MENU`. |
+| Font | The 5×5 font covers `A`–`Z`, `0`–`9`, space, `/`, `!` and `>`. |
+| Text constants | `menu.py` holds every menu string so tests can check them without pygame: `TITLE`, `MENU_HINT`, `CONTROLS_TITLE`, `CONTROLS_LINES` (the five lines), `CONTROLS_HINT` and `OVERLAY_HINT`. |
+
+### 13.3 Requirements and acceptance criteria
+
+#### R47 — The game starts on the title menu
+- `App()` is on `MENU` with START selected, no game, `quit_requested` `False`, and a backdrop `Game` at its starting state.
+- `Game()` itself is unchanged: it still starts `PLAYING`.
+
+#### R48 — The menu is navigated with single key presses
+- A press of down or up moves the selection by one and wraps at both ends; pressing both at once does nothing.
+- Holding a key for many updates moves the selection only once.
+- A key held across a screen change doesn't act on the new screen. For example, Esc held from the game doesn't quit from the menu.
+- Left, right, jump and restart don't change the selection.
+
+#### R49 — Menu options start, show controls or quit
+- Confirming START switches to `GAME` with a fresh game equal to `Game()`: same player, drawers, camera, state, clocks, treats and particles.
+- Confirming CONTROLS switches to `CONTROLS`.
+- Confirming QUIT, or pressing back on the menu, sets `quit_requested`. Nothing else does.
+
+#### R50 — The controls screen lists the keys and goes back
+- On `CONTROLS`, pressing back or confirm returns to `MENU` with CONTROLS still selected. Other keys do nothing.
+- The controls lines are exactly the five in 13.2.
+
+#### R51 — Leaving a game returns to the menu
+- In `GAME`, pressing back returns to `MENU` from `PLAYING`, `WON` or `LOST`. The game is discarded and START is selected.
+- Pressing menu returns to `MENU` only from `WON` or `LOST`; during `PLAYING` the game carries on.
+- R/Enter still restarts on the win/lose screens (R6).
+- Starting again from the menu gives a fresh game.
+- During the start gate the game gets empty inputs, though its clocks advance. Once every key is released, it gets the real inputs.
+
+#### R52 — Menu screens are drawn over the animated kitchen
+- The backdrop is never gameplay-updated. Its `ticks` goes up by 1 per update on `MENU` or `CONTROLS` and doesn't change on `GAME`.
+- In a headless render:
+  - the menu shows the panel and its text;
+  - moving the selection changes the pixels where the options are drawn;
+  - the selected option uses `cat_eye`;
+  - the HUD area matches the backdrop and panel, with no HUD;
+  - the backdrop's pixels change between ticks with different scenery frames;
+  - the controls screen differs from the menu.
+- The win/lose overlay draws the new hint.
+- Every character of every menu, controls and overlay string has a glyph.
+
+#### R53 — The entry point drives the app
+- `read_inputs` maps keys as in 13.2. The R1, R2 and R6 key checks still pass.
+- `run()` returns an `App`. A headless scripted run that confirms START and then plays for 300 updates finishes without error, with `App.game` a `Game`.
+- A scripted QUIT ends `run()` early.
+- `menu.py` doesn't import pygame or the network.
+
+### 13.4 Automated test plan (Round 7)
+| Requirement | Test file | What the tests check |
+|---|---|---|
+| R47 | `tests/test_menu_start.py` | Startup screen, selection, no game, quit flag, backdrop; `Game()` still starts PLAYING |
+| R48 | `tests/test_menu_navigation.py` | Up/down presses and wrap; both at once; held keys act once; keys held across screens; other keys ignored |
+| R49 | `tests/test_menu_actions.py` | START creates a game equal to `Game()`; CONTROLS; QUIT and back on the menu quit; nothing else quits |
+| R50 | `tests/test_controls_screen.py` | Back and confirm return with CONTROLS selected; other keys ignored; the five lines |
+| R51 | `tests/test_return_to_menu.py` | Back from every game state; M only from WON/LOST; restart unchanged; fresh game on restart from the menu; start gate |
+| R52 | `tests/test_menu_screen.py` (pure) and `tests/test_art_style.py` (renders, font) | Backdrop ticks; the render checks; overlay hint; glyph coverage |
+| R53 | `tests/test_runs_locally.py` (R8, revised) | Key mapping; headless run through the menu; scripted quit; `menu.py` stays pure |
+
+`albert/menu.py` is the only new module. Like the other logic modules, it must not import pygame.

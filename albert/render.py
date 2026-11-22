@@ -5,6 +5,7 @@ import pygame
 
 from albert import config, effects, hazards
 from albert.game import GameState, hud_text
+from albert.menu import CONTROLS_HINT, CONTROLS_LINES, CONTROLS_TITLE, MENU_HINT, OPTIONS, OVERLAY_HINT, TITLE, Screen
 from albert.sprites import render_text
 
 C = config.COLORS
@@ -47,7 +48,7 @@ def _draw_overlay(canvas, title, colour):
 
     heading = render_text(title, colour, scale=2)
     canvas.blit(heading, heading.get_rect(midtop=(panel.centerx, panel.top + 10)))
-    hint = render_text("PRESS R TO RESTART", C["text_white"])
+    hint = render_text(OVERLAY_HINT, C["text_white"])  # R52
     canvas.blit(hint, hint.get_rect(midbottom=(panel.centerx, panel.bottom - 10)))
 
 
@@ -181,8 +182,9 @@ def _albert_visible(game):
     return game.invulnerable_ticks == 0 or (game.invulnerable_ticks // 4) % 2 == 0
 
 
-def draw(canvas, game, sprites):
-    """Draw one frame of `game` onto the 320x180 internal canvas."""
+def draw(canvas, game, sprites, world_only=False):
+    """Draw one frame of `game` onto the 320x180 internal canvas.
+    world_only (Round 7 menu backdrop): leave out Albert, the HUD and overlays."""
     cam_x, cam_y = round(game.camera_x), round(game.camera_y)  # R22: scrolls on both axes
     screen = canvas.get_rect()
 
@@ -229,11 +231,14 @@ def draw(canvas, game, sprites):
 
     # Albert, flashing while invulnerable (R44).
     player = game.player
-    if _albert_visible(game):
+    if not world_only and _albert_visible(game):
         canvas.blit(_cat_frame(player, sprites), on_screen(player))
 
     # Landing dust and treat sparkles (R30/R31), in front of Albert.
     _draw_particles(canvas, game, cam_x, cam_y)
+
+    if world_only:
+        return
 
     _draw_hud(canvas, game, sprites)
 
@@ -241,3 +246,52 @@ def draw(canvas, game, sprites):
         _draw_overlay(canvas, "YOU WIN!", C["win_green"])
     elif game.state == GameState.LOST:
         _draw_overlay(canvas, "YOU LOSE", C["lose_red"])
+
+
+# --- Round 7 title menu (R52) ---
+
+MENU_PANEL = pygame.Rect(40, 20, 240, 140)
+
+
+def _centred_text(canvas, text, colour, top, scale=1):
+    surface = render_text(text, colour, scale=scale)
+    rect = surface.get_rect(midtop=(config.INTERNAL_WIDTH // 2, top))
+    canvas.blit(surface, rect)
+    return rect
+
+
+def _draw_menu_panel(canvas, app, sprites):
+    draw(canvas, app.backdrop, sprites, world_only=True)  # the animated kitchen
+    pygame.draw.rect(canvas, C["panel"], MENU_PANEL)
+    pygame.draw.rect(canvas, C["cat_eye"], MENU_PANEL, 2)
+
+
+def _draw_title_menu(canvas, app, sprites):
+    _centred_text(canvas, TITLE, C["treat_light"], 30, scale=2)
+    albert = sprites["cat_idle"]
+    canvas.blit(albert, albert.get_rect(midtop=(config.INTERNAL_WIDTH // 2, 46)))
+    for i, option in enumerate(OPTIONS):
+        chosen = i == app.selected
+        rect = _centred_text(canvas, option, C["cat_eye"] if chosen else C["text_white"], 70 + 22 * i, scale=2)
+        if chosen:
+            canvas.blit(render_text(">", C["cat_eye"], scale=2), (rect.left - 12, rect.top))  # cursor
+    _centred_text(canvas, MENU_HINT, C["text_white"], 146)
+
+
+def _draw_controls(canvas):
+    _centred_text(canvas, CONTROLS_TITLE, C["treat_light"], 30, scale=2)
+    for i, line in enumerate(CONTROLS_LINES):
+        canvas.blit(render_text(line, C["text_white"]), (56, 56 + 14 * i))
+    _centred_text(canvas, CONTROLS_HINT, C["text_white"], 146)
+
+
+def draw_app(canvas, app, sprites):
+    """R52: draw whichever screen the app is showing."""
+    if app.screen == Screen.GAME:
+        draw(canvas, app.game, sprites)
+        return
+    _draw_menu_panel(canvas, app, sprites)
+    if app.screen == Screen.MENU:
+        _draw_title_menu(canvas, app, sprites)
+    else:
+        _draw_controls(canvas)

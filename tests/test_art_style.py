@@ -447,6 +447,129 @@ def test_r45_albert_flashes_while_invulnerable(sprites):
     assert look(60) != normal and look(56) == normal
 
 
+# --- Round 7 title menu (R52) ---
+
+MENU_PANEL = pygame.Rect(40, 20, 240, 140)
+
+
+def _menu_canvas(app, sprites):
+    from albert.render import draw_app
+
+    canvas = pygame.Surface((config.INTERNAL_WIDTH, config.INTERNAL_HEIGHT))
+    draw_app(canvas, app, sprites)
+    return canvas
+
+
+def _tap(app, **keys):
+    from albert.menu import Keys
+
+    app.update(Keys(**keys), 1 / config.FPS)
+    app.update(Keys(), 1 / config.FPS)
+
+
+def test_r52_font_covers_a_to_z_and_every_menu_string():
+    import string
+
+    from albert import menu
+    from albert.sprites import _FONT
+
+    assert set(string.ascii_uppercase + string.digits + " /!>") <= set(_FONT)
+    texts = [menu.TITLE, menu.MENU_HINT, menu.CONTROLS_TITLE, menu.CONTROLS_HINT, menu.OVERLAY_HINT, ">"]
+    texts += list(menu.OPTIONS) + list(menu.CONTROLS_LINES)
+    for text in texts:
+        missing = set(text) - set(_FONT)
+        assert not missing, f"{text!r} needs glyphs {missing}"
+
+
+def test_r52_menu_draws_its_bordered_panel(sprites):
+    from albert.menu import App
+
+    canvas = _menu_canvas(App(), sprites)
+    assert tuple(canvas.get_at((MENU_PANEL.left + 1, MENU_PANEL.top + 1)))[:3] == config.COLORS["cat_eye"]
+    assert tuple(canvas.get_at((MENU_PANEL.left + 4, MENU_PANEL.top + 4)))[:3] == config.COLORS["panel"]
+
+
+def test_r52_menu_has_no_hud(sprites):
+    from albert.menu import App
+
+    canvas = _menu_canvas(App(), sprites)
+    hud = {tuple(canvas.get_at((x, y)))[:3] for x in range(2, 32) for y in range(2, 14)}
+    assert config.COLORS["panel"] not in hud, "the HUD panel should not be drawn on the menu"
+
+
+def test_r52_selected_option_is_highlighted_and_moves(sprites):
+    from albert.menu import App
+
+    app = App()
+    first = _menu_canvas(app, sprites)
+    yellow = config.COLORS["cat_eye"]
+
+    def yellow_rows(canvas):
+        inner = MENU_PANEL.inflate(-8, -8)
+        return {y for y in range(inner.top, inner.bottom) for x in range(inner.left, inner.right)
+                if tuple(canvas.get_at((x, y)))[:3] == yellow}
+
+    assert yellow_rows(first) & set(range(70, 80)), "START is drawn in cat_eye"
+    _tap(app, down=True)
+    second = _menu_canvas(app, sprites)
+    assert yellow_rows(second) & set(range(92, 102)), "CONTROLS is drawn in cat_eye"
+    assert not yellow_rows(second) & set(range(70, 80))
+    options = pygame.Rect(MENU_PANEL.left, 66, MENU_PANEL.width, 62)
+    assert pygame.image.tobytes(first.subsurface(options), "RGB") != pygame.image.tobytes(second.subsurface(options), "RGB")
+
+
+def test_r52_backdrop_animates_behind_the_menu(sprites):
+    from albert.menu import App
+
+    app = App()
+    before = pygame.image.tobytes(_menu_canvas(app, sprites), "RGB")
+    app.backdrop.ticks = 120
+    assert pygame.image.tobytes(_menu_canvas(app, sprites), "RGB") != before
+
+
+def test_r52_controls_screen_differs_from_the_menu(sprites):
+    from albert.menu import App
+
+    app = App()
+    menu_look = pygame.image.tobytes(_menu_canvas(app, sprites), "RGB")
+    _tap(app, down=True)
+    menu_controls_selected = pygame.image.tobytes(_menu_canvas(app, sprites), "RGB")
+    _tap(app, confirm=True)
+    controls = pygame.image.tobytes(_menu_canvas(app, sprites), "RGB")
+    assert controls != menu_look and controls != menu_controls_selected
+
+
+def test_r52_game_screen_uses_the_normal_game_drawing(sprites):
+    from albert.menu import App
+    from albert.render import draw
+
+    app = App()
+    _tap(app, confirm=True)
+    expected = pygame.Surface((config.INTERNAL_WIDTH, config.INTERNAL_HEIGHT))
+    draw(expected, app.game, sprites)
+    assert pygame.image.tobytes(_menu_canvas(app, sprites), "RGB") == pygame.image.tobytes(expected, "RGB")
+
+
+def test_r52_lose_overlay_shows_the_new_hint(sprites):
+    from albert.game import Game, GameState
+    from albert.menu import OVERLAY_HINT
+    from albert.render import draw
+    from albert.sprites import render_text
+
+    game = Game()
+    game.state = GameState.LOST
+    canvas = pygame.Surface((config.INTERNAL_WIDTH, config.INTERNAL_HEIGHT))
+    draw(canvas, game, sprites)
+    hint = render_text(OVERLAY_HINT, config.COLORS["text_white"])
+    panel = pygame.Rect(0, 0, 200, 52)
+    panel.center = (config.INTERNAL_WIDTH // 2, config.INTERNAL_HEIGHT // 2)
+    rect = hint.get_rect(midbottom=(panel.centerx, panel.bottom - 10))
+    for x in range(hint.get_width()):
+        for y in range(hint.get_height()):
+            if hint.get_at((x, y)).a:
+                assert tuple(canvas.get_at((rect.x + x, rect.y + y)))[:3] == config.COLORS["text_white"]
+
+
 def test_r7_albert_is_a_black_cat_with_a_visible_highlight(sprites):
     colours = opaque_colours(sprites["cat_idle"])
     dark = sum(1 for c in colours if luminance(c) < 64)
