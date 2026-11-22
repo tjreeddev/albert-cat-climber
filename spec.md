@@ -1,10 +1,10 @@
-# Albert Cat Climber — Specification (Rounds 1–4)
+# Albert Cat Climber — Specification (Rounds 1–5)
 
 ## 1. Overview
 
 Albert Cat Climber is a small 2D platformer based on the developer's black cat, Albert. The player guides Albert up a tower of kitchen cabinets. The goal is to reach the highest cabinet without falling.
 
-Round 1 is deliberately small. It covers only the requirements R1–R8 from `problem.md`. Round 2 adds one feature, optional cat treats (R9–R14), described in section 8. R1–R8 are unchanged. Round 3 adds one feature, two horizontally moving cabinet drawers (R15–R20), described in section 9. R1–R14 behaviour is unchanged; the only Round 1 change is that two route cabinets become drawers (section 9.1). Round 4 replaces the compact tower with a large kitchen level, a camera that scrolls on both axes, and a longer route through four progressively harder sections (R21–R26), described in section 10. Albert's physics and the R1–R20 rules are unchanged; the level size, layout and the treat and drawer counts are revised (section 10.1).
+Round 1 is deliberately small. It covers only the requirements R1–R8 from `problem.md`. Round 2 adds one feature, optional cat treats (R9–R14), described in section 8. R1–R8 are unchanged. Round 3 adds one feature, two horizontally moving cabinet drawers (R15–R20), described in section 9. R1–R14 behaviour is unchanged; the only Round 1 change is that two route cabinets become drawers (section 9.1). Round 4 replaces the compact tower with a large kitchen level, a camera that scrolls on both axes, and a longer route through four progressively harder sections (R21–R26), described in section 10. Albert's physics and the R1–R20 rules are unchanged; the level size, layout and the treat and drawer counts are revised (section 10.1). Round 5 adds visual-only kitchen animation and effects (R27–R32), described in section 11: looping decorations, landing dust and a treat sparkle. Gameplay is unchanged. Section 11.5 expands Round 5 with large background scenery (R33–R38): windows with animated outdoor views that change with height, curtains, plants, pictures and tiled panels.
 
 ## 2. Scope
 
@@ -20,7 +20,7 @@ Round 1 is deliberately small. It covers only the requirements R1–R8 from `pro
 ### Out of scope (Round 1)
 Collectibles, enemies, moving platforms, multiple levels, sound or music, power-ups, score/timer, menus beyond the win/lose overlay, save data, and anything else not required by `problem.md`.
 
-Round 2 lifts the "collectibles" exclusion for cat treats only (section 8). Round 3 lifts the "moving platforms" exclusion for horizontally moving drawers only (section 9; six of them from Round 4). Everything else above stays out of scope.
+Round 2 lifts the "collectibles" exclusion for cat treats only (section 8). Round 3 lifts the "moving platforms" exclusion for horizontally moving drawers only (section 9; six of them from Round 4). Round 5 adds non-interactive decorations and particle effects only (section 11). Everything else above stays out of scope.
 
 ## 3. Technical decisions
 
@@ -391,3 +391,176 @@ No new modules are added; section 7's layout still applies, plus the six test fi
 | R3, R6, R9, R11, R13, R15, R19 (revised) | existing files | Climbability walks `Level.route` with rise-dependent reach (the 10–12-cabinet and 2–3-screen tests are removed); the restart snapshot includes `camera_x`; treat and drawer counts become 12 and 6; R19 uses route neighbours, loops over all drawers and samples each drawer's full cycle |
 
 No new modules are added. The shared jump-reach helpers live in `tests/conftest.py`.
+
+## 11. Round 5 — Kitchen animation and visual effects (R27–R38)
+
+### 11.1 Scope
+- **In scope:**
+  - an animation clock that counts updates;
+  - a few fixed, looping kitchen decorations: steaming mugs, steaming pots and blinking appliance clocks;
+  - a small dust puff when Albert lands;
+  - a short sparkle when Albert collects a treat.
+- **Out of scope:** decorations that collide with anything, random or physics-driven particles, screen shake, lighting or blending effects, Albert squash/stretch or new cat frames, parallax, weather (the clouds in the window views, R36, are scenery, not weather), sound or music, settings to turn effects off, and any other feature not listed here.
+- **Visual only.** Round 5 doesn't change:
+  - Albert's physics, speed, jump height or controls;
+  - the cabinets, drawers, treats or `Level.route` from Round 4;
+  - drawer motion or riding;
+  - the camera;
+  - treat collection, the treat count or the HUD;
+  - win, lose or restart rules.
+
+  R1–R26 keep holding as written.
+- **Approved revisions to earlier rounds:**
+  - New pure module `albert/effects.py` (no pygame). It holds particles and the animation-frame helper.
+  - `Level` gains `decorations`, which is fixed, non-solid data. The Round 4 cabinet, drawer and treat layout is unchanged.
+
+### 11.2 Decisions
+| Topic | Decision |
+|---|---|
+| Animation clock | `Game.ticks` starts at 0 and goes up by 1 on every `update()` in every state: `PLAYING`, `WON` and `LOST`. `restart()` sets it to 0. It counts updates, not wall-clock time, so animation is deterministic. |
+| Frame helper | `effects.anim_frame(ticks, frame_ticks, frame_count, phase=0)` returns `((ticks + phase) // frame_ticks) % frame_count`. Every looping animation chooses its frame with this helper only. `effects.decoration_frame(decoration, ticks)` applies it with the decoration's kind timing from `config.DECORATION_FRAMES` and its `phase`. |
+| Decorations | `Level.decorations` is a list of `level.Decoration(kind, x, y, section, phase)` (default: empty). Its size comes from its kind. Decorations are never in `Level.platforms` and nothing collides with them. Default level: 8 decorations, 2 per section. A mug's or pot's `section` is the section of the cabinet it sits on. |
+| Kinds and sizes | **Mug** (`"mug"`): 8×16. A cup in the bottom 8 rows with steam rising above it. 4 frames, 10 ticks each.<br>**Pot** (`"pot"`): 16×20. A pot in the bottom 10 rows with steam above it. 4 frames, 8 ticks each.<br>**Clock** (`"clock"`): 16×8. A wall-mounted appliance clock whose colon and digits light up and go dark. 2 frames, 30 ticks each. |
+| Placement | **Mugs and pots** rest on a static cabinet: bottom = cabinet top, horizontally within the cabinet. They never sit on a drawer or the goal cabinet, and never overlap a treat or Albert's starting hitbox.<br>**Clocks** hang on the wall. They don't overlap any cabinet, drawer path or treat.<br>All decorations are inside the world. Each section has at least one steaming item (mug or pot), and all three kinds appear in the level. |
+| Phase | Each decoration has a fixed `phase`, so decorations of the same kind don't animate in lockstep. |
+| States | Decorations and particles keep animating in `WON` and `LOST`, behind the overlay. Drawers stay frozen there (R16). |
+| Particles | `effects.Particle(kind, x, y, vx, vy, life)`. Every update, in every state, each particle moves by `velocity × dt` and loses 1 `life`. It is removed when `life` reaches 0. There is no gravity, no collision and no randomness. `Game.particles` holds them, at most `config.MAX_PARTICLES` = 48. When a new particle would exceed the limit, the oldest are dropped first. |
+| Landing | Albert lands when he was not standing before this update's physics step and is standing after it, on a cabinet or a drawer, while `PLAYING`. Standing still, riding a drawer and the standing start after `restart()` are not landings. The landing that wins the game counts. |
+| Spawning | `effects.dust_particles(player)` and `effects.sparkle_particles(treat)` return the new particles in order. `game.py` calls them through the module (`effects.dust_particles(...)`), so tests can replace them. New particles are appended to the end of `Game.particles`, so the oldest come first. |
+| Landing dust | `DUST_COUNT` = 4 `"dust"` particles start at Albert's feet: y = bottom − 1, at x = left + 2, left + 4, right − 4 and right − 2. Their velocities are (−30, −10), (−15, −10), (15, −10) and (30, −10) px/s. They last `DUST_LIFE` = 12 ticks. Each is drawn as 1×1 `counter_shade`. |
+| Treat sparkle | Each collected treat spawns `SPARKLE_COUNT` = 6 `"sparkle"` particles at the treat's centre. They move outward at `SPARKLE_SPEED` = 40 px/s at evenly spaced angles, starting straight up: particle k has velocity (40·sin θ, −40·cos θ) with θ = k × 360° / 6. They last `SPARKLE_LIFE` = 18 ticks. Each is drawn as a 3×3 plus sign in `brass`, centred on its rounded position, for the first half of its life. After that it is a 1×1 pixel in `text_white`. Dust is likewise drawn at its rounded position. Two treats collected on one frame give two sparkles. |
+| Update order (while `PLAYING`) | Move drawers and carry Albert → physics → spawn dust on landing → collect treats and spawn sparkles → lose/win check → camera → step existing particles. New particles start stepping on the next update. In `WON`/`LOST`, `update` advances `ticks` and steps particles, then handles restart. |
+| Restart | `restart()` sets `ticks` to 0 and clears `particles`. Pressing restart during `PLAYING` still does nothing (R6). |
+| Draw order | Wallpaper → clocks → cabinets → drawers → mugs and pots → treats → Albert → particles → HUD → overlay. Decorations and particles are offset by the camera, and anything off-screen is skipped. |
+| Art (R7 rules) | New sprites: `mug_0`–`mug_3`, `pot_0`–`pot_3` and `clock_0`–`clock_1`. They use palette colours only, at most 16 colours and no semi-transparent pixels. Steam uses `text_white` with a darker outline pixel where it crosses the light wallpaper. Existing colours are reused where possible, and at most 2 new palette colours are added. |
+| Constants | These live in `config.py`:<br>• `MAX_PARTICLES`, `DUST_COUNT`, `DUST_LIFE`, `SPARKLE_COUNT`, `SPARKLE_LIFE` and `SPARKLE_SPEED`;<br>• `DECORATION_FRAMES`, a dict from kind to `(frame_ticks, frame_count)`: `{"mug": (10, 4), "pot": (8, 4), "clock": (30, 2)}`;<br>• `MUG_SIZE`, `POT_SIZE` and `CLOCK_SIZE` as `(width, height)` tuples, plus `DECORATION_SIZES` mapping each kind to its size.<br>Sprite keys are `f"{kind}_{frame}"`. |
+
+### 11.3 Requirements and acceptance criteria
+
+#### R27 — Animation is driven by a deterministic update clock
+- `Game.ticks` is 0 after `Game()` and after `restart()`.
+- Each `update()` adds exactly 1, in `PLAYING`, `WON` and `LOST`. On the update that restarts, `ticks` ends at 0.
+- `anim_frame` follows the formula above. It loops with period `frame_ticks × frame_count`, and `phase` shifts it.
+- Two games fed the same inputs have the same `ticks`, decoration frames and particles after every update.
+
+#### R28 — The kitchen has fixed decorations in every section
+- The default level has exactly 8 decorations, 2 in each of sections 1–4, and uses all three kinds.
+- Each section has at least one mug or pot.
+- The placement rules above hold.
+- Decorations of the same kind don't all share a phase.
+- Playing never changes `Level.decorations`.
+
+#### R29 — Decorations loop through their animation frames
+- A decoration's frame at tick `t` is `anim_frame(t, its kind's frame_ticks, its kind's frame_count, its phase)`. Over one full period, every frame is shown.
+- In a headless render, a decoration's on-screen pixels differ between two ticks that give different frames. They are identical for two ticks that give the same frame.
+- Decorations animate in `WON` and `LOST` as well as `PLAYING`.
+
+#### R30 — Landing makes a small dust puff
+- Landing on a cabinet or a drawer spawns exactly `DUST_COUNT` dust particles with the positions, velocities and life above.
+- Standing still, walking along a cabinet, riding a drawer, jumping up through a cabinet, being in mid-air and the starting position after `restart()` spawn no dust.
+- Dust moves by `velocity × dt` per update and is gone after `DUST_LIFE` updates.
+- The landing that wins spawns dust.
+
+#### R31 — Collecting a treat makes a sparkle
+- Each collected treat spawns exactly `SPARKLE_COUNT` sparkle particles at its centre, moving outward at evenly spaced angles.
+- Two treats collected on one frame give two sparkles.
+- Edge-only touches, already-collected treats, and touches in `WON`/`LOST` spawn nothing, following R10.
+- Sparkles are gone after `SPARKLE_LIFE` updates.
+- The total number of particles never exceeds `MAX_PARTICLES`.
+
+#### R32 — Effects are visual only and reset on restart
+- A scripted run gives exactly the same gameplay state every update as the same run with no decorations and no particle spawning. The gameplay state is Albert, drawers, camera, game state, treats collected and the HUD text.
+- Albert falls straight through a decoration's area, because decorations are not platforms.
+- The physics constants keep their Round 1 values (R26).
+- `restart()` from `WON` or `LOST` sets `ticks` to 0 and empties `particles`. Pressing restart during `PLAYING` changes neither.
+
+### 11.4 Automated test plan (Round 5)
+| Requirement | Test file | What the tests check |
+|---|---|---|
+| R27 | `tests/test_anim_clock.py` | Ticks start at 0; +1 per update in every state; restart resets; `anim_frame` formula, period and phase; two identical runs match |
+| R28 | `tests/test_decorations.py` | 8 decorations, 2 per section; all kinds present; a steaming item per section; rest-on-cabinet and wall rules; no overlap with treats, the start or drawer paths; inside the world; phases vary; level data unchanged |
+| R29 | `tests/test_decoration_anim.py` | Frame matches `anim_frame`; every frame appears per period; still animating in WON/LOST (pure). The headless pixel checks live in `test_art_style.py` |
+| R30 | `tests/test_landing_dust.py` | Dust on cabinet and drawer landings; none when standing, walking, riding, rising through a cabinet, airborne or at restart; motion and lifetime; dust on the winning landing |
+| R31 | `tests/test_treat_sparkle.py` | Sparkle count, centre and directions; two treats give two sparkles; nothing for edge touches, repeats or WON/LOST; lifetime; particle cap |
+| R32 | `tests/test_visual_only.py` | Gameplay snapshots identical with and without decorations and effects; falling through a decoration; physics pinned; restart clears ticks and particles; restart during PLAYING doesn't |
+| R7 (extended) | `tests/test_art_style.py` | Decoration frames are required sprites (palette, ≤ 16 colours, no semi-transparency) and match their kind's size; headless render pixels change between frames of a decoration (R29) |
+
+`albert/effects.py` is the only new module. Like `config.py`, `physics.py`, `level.py` and `game.py`, it must not import pygame.
+
+### 11.5 Round 5 expansion — Background scenery (R33–R38)
+
+#### 11.5.1 Scope
+- **In scope:**
+  - large background scenery fixed to the kitchen wall: windows, tiled backsplash panels, framed pictures and hanging plants;
+  - an animated outdoor view through every window, which changes with height: garden → town → city → sky;
+  - slowly drifting clouds, plus one more motion per view;
+  - curtains swaying on every window, and hanging plants that sway.
+- **Out of scope:** parallax or any camera-dependent scrolling of the view, weather (rain or snow), a day/night cycle, lighting, scenery anyone can touch or stand on, and anything else not listed here.
+- **Visual only.** Everything in 11.1 still applies. Scenery never collides with anything and never changes gameplay. R1–R32 still hold, and R27–R32 and their tests are unchanged.
+- **Approved addition:** `Level.scenery`, fixed non-solid data in `level.py`, separate from `Level.decorations`.
+
+#### 11.5.2 Decisions
+| Topic | Decision |
+|---|---|
+| Data | `Level.scenery` is a list of `level.Scenery(kind, x, y, width, height, section, phase=0, view=None)` (default: empty). It is never in `Level.platforms` and nothing collides with it. `view` is set only for windows. |
+| Kinds | **Window** (`"window"`): a large window of fixed size `WINDOW_SIZE` = 192×128. It has a `WINDOW_FRAME` = 4 px frame; the glass inside shows the outdoor view. A `CURTAIN_WIDTH` = 24 px curtain hangs over each side of the glass, full height.<br>**Tiles** (`"tiles"`): a static backsplash panel made of `TILE_SIZE` = 16 px tiles. Its width and height are multiples of 16, at least 64×32.<br>**Picture** (`"picture"`): a static framed picture, `PICTURE_SIZE` = 48×32.<br>**Plant** (`"plant"`): a hanging plant, `PLANT_SIZE` = 24×40. |
+| Views | A window's `view` is set by its section: S1 `"garden"`, S2 `"town"`, S3 `"city"`, S4 `"sky"` (`config.VIEW_BY_SECTION`). Every view has a sky and drifting clouds, with:<br>• garden: a fence, trees and distant rooftops; the trees sway;<br>• town: rows of rooftops with chimneys; chimney smoke puffs;<br>• city: a skyline of tower blocks; their lit windows blink;<br>• sky: distant hills along the bottom; small birds glide across. |
+| Amount | 4–6 large windows in the level, 1 or 2 per section, placed where many route views see them. Window centres get higher section by section: every S1 window's centre is lower than every S2 window's centre, and so on up to S4. The large windows and their outdoor views are the main feature, so the windows' total area exceeds the tiles' total area. Tiles, pictures and plants fill the remaining bare wall. |
+| Section bands | A section's height band runs from the top of its highest cabinet or drawer to the bottom of its lowest one. In the default level: S1 858–1076, S2 596–838, S3 310–572, S4 24–284. Every window's centre lies inside its own section's band. Every other item is tagged with the section whose band is nearest its centre; inside a band the distance is 0, and an exact tie may use either section. |
+| Coverage | For every stop on `Level.route` (a drawer at the middle of its path), take the camera view with Albert standing centred on the stop (R22 camera rule). Scenery covers at least 20% of that 320×180 view. Only windows and tiles count toward it; pictures and plants don't. Coverage is measured from the items' rectangles, which never overlap each other. In each section, at least half of these views show part of a window of that section. |
+| Placement | Every scenery item is inside the world. Items don't overlap each other or any clock. They may sit behind cabinets, drawers, treats, mugs and pots, but at most 25% of a window's area may be behind cabinets or drawer paths. That share is the sum of its overlaps with cabinet rectangles and drawer-path rectangles, which never overlap each other (R15). Exact positions are chosen during implementation. |
+| Animation | Driven only by `Game.ticks`:<br>• `effects.scroll_offset(ticks, ticks_per_px, loop_px, phase=0)` returns `((ticks + phase) // ticks_per_px) % loop_px`.<br>• Clouds drift right by 1 px every `CLOUD_TICKS_PER_PX` = 6 ticks (10 px/s) and wrap every `CLOUD_LOOP` = 160 px.<br>• Birds (sky view) glide 1 px every `BIRD_TICKS_PER_PX` = 3 ticks and wrap every `BIRD_LOOP` = 160 px.<br>• Looping frames use `anim_frame` with `config.SCENERY_FRAMES`: `{"garden": (45, 2), "town": (20, 3), "city": (50, 2), "curtain": (30, 4), "plant": (50, 2)}`. The four curtain frames show the art in the order `CURTAIN_SEQUENCE` = (0, 1, 2, 1), a gentle back-and-forth sway.<br>• Each item's `phase` offsets all of its animations, so windows don't move in lockstep.<br>• `effects.scenery_anim(item, ticks)` returns the item's animation state as a tuple of ints: window `(cloud_offset, view_frame, bird_offset, curtain_frame)`, where `curtain_frame` is the art frame (0–2) after `CURTAIN_SEQUENCE`, `view_frame` is 0 for sky, and `bird_offset` is 0 except for sky; plant `(frame,)`; tiles and picture `()`.<br>• Like decorations, scenery keeps animating in `WON` and `LOST` and resets on restart, because it follows `ticks`. |
+| Draw order | Wallpaper → scenery (for a window: sky, clouds, the view and its animation, all clipped to the glass; then the frame and curtains) → clocks → cabinets → drawers → mugs and pots → treats → Albert → particles → HUD → overlay. Scenery is offset by the camera, and off-screen items are skipped. |
+| Readability | Scenery must never look like something to stand on:<br>• No scenery sprite uses the cabinet and drawer colours `wood_light`, `wood_mid`, `wood_dark`, `counter_top` or `counter_shade`.<br>• Windows have no protruding sill.<br>• At most 10% of any scenery sprite's opaque pixels are darker than luminance 64, so black Albert stays easy to see. |
+| Art (R7 rules) | Palette colours only, at most 16 colours per sprite, no semi-transparent pixels. Up to 8 new palette colours may be added for sky, foliage, roofs and buildings. Outdoor-view strips are drawn as tiles that wrap seamlessly at their loop width. Every scenery sprite key starts with `scn_`. These keys must exist: `scn_curtain_0`–`scn_curtain_2`, `scn_plant_0`–`scn_plant_1`, `scn_picture` (48×32), `scn_tile` (16×16), and at least one key starting with `scn_<view>_` for each of the four views. |
+
+#### 11.5.3 Requirements and acceptance criteria
+
+##### R33 — The kitchen has large background scenery
+- `Level.scenery` uses all four kinds and has 4–6 windows, 1 or 2 per section. Window centres rise section by section.
+- Each window's centre lies inside its section's band, and every other item carries the section nearest its centre.
+- The windows' total area exceeds the tiles' total area.
+- Sizes follow the table above.
+- The placement rules above hold.
+- Scenery items are never platforms.
+- Playing never changes `Level.scenery`.
+
+##### R34 — Scenery fills a large part of the screen everywhere on the route
+- At every route-stop view, windows and tiles cover at least 20% of the screen.
+- In each section, at least half of the route-stop views show part of one of that section's windows.
+
+##### R35 — The view outside changes as Albert climbs
+- Each window's `view` matches its section through `VIEW_BY_SECTION`.
+- In a headless render at the same tick, the glass areas of the four views all differ from one another.
+
+##### R36 — The outside view is always gently moving
+- `scroll_offset` follows its formula, and `scenery_anim` follows the definitions above.
+- For every window, the animation state changes at least once in any 60 updates. The clouds move in every view.
+- Two games given the same inputs have the same scenery state after every update.
+- Scenery keeps animating in `WON` and `LOST`.
+- In a headless render, a window's glass pixels change between two ticks with different `cloud_offset`, and are identical for two ticks with the same animation state.
+
+##### R37 — Curtains and hanging plants sway
+- Every window's curtain frame cycles 0, 1, 2, 1 every 120 ticks.
+- Every plant cycles through its 2 frames.
+- The curtain sprites `scn_curtain_0`, `scn_curtain_1` and `scn_curtain_2` all differ, and the two plant sprites differ.
+
+##### R38 — Scenery is visual only and stays behind gameplay
+- A scripted run gives exactly the same gameplay state every update with and without scenery (the R32 comparison).
+- Albert falls straight through a scenery item's area.
+- In a headless render, every pixel where a cabinet, drawer, treat or Albert sprite is opaque looks the same with and without scenery behind it.
+- The HUD pixels are identical with and without scenery.
+- The readability rules above hold for every scenery sprite.
+
+#### 11.5.4 Automated test plan (R33–R38)
+| Requirement | Test file | What the tests check |
+|---|---|---|
+| R33 | `tests/test_scenery.py` | Kinds, sizes and counts; 1–2 windows per section, rising by section; inside the world; no overlaps with each other or clocks; at most 25% of each window hidden; not platforms; level data unchanged |
+| R34 | `tests/test_scenery_coverage.py` | Coverage of at least 20% at every route-stop view; a window visible in at least half the views of each section |
+| R35 | `tests/test_window_views.py` | View matches section (pure). The pixel check that the four views differ is in `test_art_style.py` |
+| R36 | `tests/test_outside_anim.py` | `scroll_offset` formula; `scenery_anim` definitions; a change within every 60 ticks; deterministic; animates in WON/LOST. Pixel checks are in `test_art_style.py` |
+| R37 | `tests/test_curtains_plants.py` | The curtain sequence 0, 1, 2, 1 and its period; plant frames. The sprite-difference check is in `test_art_style.py` |
+| R38 | `tests/test_scenery_visual_only.py` | Gameplay identical with and without scenery; falling through scenery. The layering, HUD and readability pixel checks are in `test_art_style.py` |
+| R7 (extended) | `tests/test_art_style.py` | Scenery sprites follow the palette, colour-count and transparency rules; the R35–R38 render checks |
+
+No new modules. Scenery data lives in `level.py`, its animation helpers in `effects.py`, its sprites in `sprites.py` and its drawing in `render.py`.

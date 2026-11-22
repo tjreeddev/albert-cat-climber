@@ -19,6 +19,34 @@ DRAWER_WIDTH = 32
 DRAWER_HEIGHT = 16
 DRAWER_SPEED = 40.0  # px/s, slower than Albert's MOVE_SPEED
 
+# --- Kitchen animation and effects (Round 5, R27-R32); timings are in update ticks ---
+MUG_SIZE = (8, 16)
+POT_SIZE = (16, 20)
+CLOCK_SIZE = (16, 8)
+DECORATION_SIZES = {"mug": MUG_SIZE, "pot": POT_SIZE, "clock": CLOCK_SIZE}
+DECORATION_FRAMES = {"mug": (10, 4), "pot": (8, 4), "clock": (30, 2)}  # kind -> (frame_ticks, frame_count)
+MAX_PARTICLES = 48
+DUST_COUNT = 4
+DUST_LIFE = 12
+SPARKLE_COUNT = 6
+SPARKLE_LIFE = 18
+SPARKLE_SPEED = 40.0  # px/s
+
+# --- Background scenery (Round 5 expansion, R33-R38); timings are in update ticks ---
+WINDOW_SIZE = (192, 128)
+WINDOW_FRAME = 4  # px of frame around the glass
+CURTAIN_WIDTH = 24
+PICTURE_SIZE = (48, 32)
+PLANT_SIZE = (24, 40)
+TILE_SIZE = 16
+VIEW_BY_SECTION = {1: "garden", 2: "town", 3: "city", 4: "sky"}
+CLOUD_TICKS_PER_PX = 6
+CLOUD_LOOP = 160
+BIRD_TICKS_PER_PX = 3
+BIRD_LOOP = 160
+SCENERY_FRAMES = {"garden": (45, 2), "town": (20, 3), "city": (50, 2), "curtain": (30, 4), "plant": (50, 2)}
+CURTAIN_SEQUENCE = (0, 1, 2, 1)  # art frame for each curtain animation step
+
 # --- Physics (world pixels and seconds; y grows downward) ---
 MOVE_SPEED = 100.0  # horizontal speed while a direction is held (R1)
 GRAVITY = 900.0  # downward acceleration (R2)
@@ -47,5 +75,14 @@ COLORS = {
     "lose_red": (236, 84, 84),
     "treat_mid": (244, 132, 84),
     "treat_light": (252, 200, 150),
+    # Round 5 scenery (R33-R38): the outdoor views, plants and tiles
+    "sky_light": (184, 222, 248),
+    "sky_blue": (124, 180, 236),
+    "leaf_light": (124, 192, 96),
+    "leaf_dark": (64, 128, 72),
+    "roof_red": (184, 88, 72),
+    "stone_grey": (156, 158, 176),
+    "building_blue": (104, 120, 160),
+    "hill_green": (150, 200, 128),
 }
 PALETTE = list(COLORS.values())

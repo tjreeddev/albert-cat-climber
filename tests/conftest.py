@@ -84,10 +84,20 @@ def make_game():
     add_decoy_goal: add DECOY_GOAL so none of `platforms` is the goal
     treats:    optional list of (x, y) top-left treat positions (Round 2)
     drawers:   optional list of dicts of level.Drawer keyword arguments (Round 3)
+    decorations: optional list of (kind, x, y) decorations (Round 5), section 1, phase 0
+    scenery:   optional list of dicts of level.Scenery keyword arguments (Round 5, R33-R38)
     """
 
     def _make(
-        platforms, start, world_width=320, world_height=1000, add_decoy_goal=True, treats=(), drawers=()
+        platforms,
+        start,
+        world_width=320,
+        world_height=1000,
+        add_decoy_goal=True,
+        treats=(),
+        drawers=(),
+        decorations=(),
+        scenery=(),
     ):
         from albert.game import Game
         from albert.level import Level, Platform
@@ -101,6 +111,14 @@ def make_game():
             from albert.level import Drawer
 
             extra["drawers"] = [Drawer(**d) for d in drawers]
+        if decorations:
+            from albert.level import Decoration
+
+            extra["decorations"] = [Decoration(kind, x, y, 1, 0) for kind, x, y in decorations]
+        if scenery:
+            from albert.level import Scenery
+
+            extra["scenery"] = [Scenery(**s) for s in scenery]
         specs = list(platforms) + ([DECOY_GOAL] if add_decoy_goal else [])
         level = Level(
             platforms=[Platform(*p) for p in specs],

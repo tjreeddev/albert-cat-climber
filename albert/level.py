@@ -46,6 +46,33 @@ class Drawer:
             object.__setattr__(self, "start_x", self.min_x)
 
 
+@dataclass(frozen=True, eq=False)
+class Decoration:
+    """A non-solid, looping kitchen decoration (R28): "mug", "pot" or "clock".
+    Its size comes from `config.DECORATION_SIZES`; nothing collides with it."""
+
+    kind: str
+    x: float
+    y: float
+    section: int = 1
+    phase: int = 0  # update ticks added before choosing a frame (R29)
+
+
+@dataclass(frozen=True, eq=False)
+class Scenery:
+    """A large, non-solid background item (R33): "window", "tiles", "picture" or "plant".
+    Only windows have a `view` (R35). Nothing collides with scenery."""
+
+    kind: str
+    x: float
+    y: float
+    width: float
+    height: float
+    section: int = 1
+    phase: int = 0  # update ticks added before choosing frames and offsets (R36/R37)
+    view: str = None
+
+
 @dataclass
 class Level:
     platforms: list
@@ -55,6 +82,8 @@ class Level:
     treats: list = field(default_factory=list)  # R9 (Round 2)
     drawers: list = field(default_factory=list)  # R15 (Round 3)
     route: list = field(default_factory=list)  # R23 (Round 4): intended stops in order
+    decorations: list = field(default_factory=list)  # R28 (Round 5): visual only
+    scenery: list = field(default_factory=list)  # R33 (Round 5): visual only, behind everything
 
     @property
     def goal_platform(self):
@@ -161,6 +190,64 @@ def _stop(entry):
     return Drawer(min_x, max_x, y, speed=speed, start_x=start_x, start_direction=direction, section=section)
 
 
+# R28 (Round 5): visual-only decorations as (kind, section, x, y, phase), 2 per
+# section. Mugs and pots rest on a static cabinet in their section; clocks hang
+# on bare wall. None covers a treat, the start or a drawer's path.
+_DECORATIONS = [
+    ("mug", 1, 230, 1012 - 16, 0),  # on (192, 1012)
+    ("clock", 1, 300, 930, 0),
+    ("pot", 2, 362, 688 - 20, 0),  # on (352, 688)
+    ("clock", 2, 560, 680, 25),
+    ("mug", 3, 508, 420 - 16, 17),  # on (498, 420)
+    ("pot", 3, 826, 334 - 20, 11),  # on (820, 334)
+    ("pot", 4, 428, 116 - 20, 21),  # on (424, 116)
+    ("clock", 4, 760, 120, 41),
+]
+
+
+# R33/R34 (Round 5): background scenery as (kind, section, x, y, width, height, phase).
+# Large windows are the main feature, 1-2 per section, each centred inside its
+# section's height band; tiles fill the views the windows don't reach, and a
+# picture and a hanging plant decorate bare wall in every section.
+_SCENERY = [
+    # S1 - garden view
+    ("window", 1, 520, 796, 192, 128, 0),
+    ("window", 1, 248, 940, 192, 128, 50),
+    ("tiles", 1, 0, 880, 64, 64, 0),
+    ("tiles", 1, 608, 928, 64, 32, 0),
+    ("picture", 1, 136, 902, 48, 32, 0),
+    ("plant", 1, 208, 902, 24, 40, 0),
+    # S2 - town view
+    ("window", 2, 232, 584, 192, 128, 23),
+    ("window", 2, 576, 668, 192, 128, 77),
+    ("picture", 2, 720, 804, 48, 32, 0),
+    ("plant", 2, 432, 644, 24, 40, 25),
+    # S3 - city view
+    ("window", 3, 264, 392, 192, 128, 11),
+    ("tiles", 3, 0, 480, 64, 64, 0),
+    ("tiles", 3, 544, 288, 64, 64, 0),
+    ("tiles", 3, 0, 400, 64, 32, 0),
+    ("tiles", 3, 416, 288, 64, 32, 0),
+    ("picture", 3, 104, 514, 48, 32, 0),
+    ("plant", 3, 224, 486, 24, 40, 12),
+    # S4 - open sky view
+    ("window", 4, 312, 52, 192, 128, 39),
+    ("tiles", 4, 640, 240, 128, 96, 0),
+    ("tiles", 4, 624, 112, 64, 128, 0),
+    ("tiles", 4, 0, 0, 160, 64, 0),
+    ("tiles", 4, 480, 192, 64, 32, 0),
+    ("tiles", 4, 0, 64, 64, 32, 0),
+    ("picture", 4, 192, 84, 48, 32, 0),
+    ("plant", 4, 280, 24, 24, 40, 37),
+]
+
+
+def _scenery(entry):
+    kind, section, x, y, width, height, phase = entry
+    view = config.VIEW_BY_SECTION[section] if kind == "window" else None
+    return Scenery(kind, x, y, width, height, section, phase, view)
+
+
 def build_level():
     route = [_stop(entry) for entry in _ROUTE]
     sides = [Platform(x, y, w, _CABINET_HEIGHT, s) for s, x, y, w in _SIDE]
@@ -177,4 +264,6 @@ def build_level():
         treats=treats,
         drawers=drawers,
         route=route,
+        decorations=[Decoration(kind, x, y, section, phase) for kind, section, x, y, phase in _DECORATIONS],
+        scenery=[_scenery(entry) for entry in _SCENERY],
     )

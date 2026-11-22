@@ -6,7 +6,7 @@ Pure Python: must not import pygame.
 from dataclasses import dataclass
 from enum import Enum
 
-from albert import config, physics
+from albert import config, effects, physics
 from albert.level import build_level
 
 
@@ -40,8 +40,15 @@ class Game:
         self.state = GameState.PLAYING
         self.collected = set()  # R10/R13: treats collected this run
         self.camera_x, self.camera_y = self._camera_target()  # R22
+        self.ticks = 0  # R27: animation clock, in updates
+        self.particles = []  # R30/R31: visual only, oldest first
 
     def update(self, inputs, dt):
+        # R27-R29: the animation clock and existing particles run in every state.
+        # Particles spawned below start moving on the next update.
+        self.ticks += 1
+        effects.step_particles(self.particles, dt)
+
         if self.state != GameState.PLAYING:
             # R4/R5: gameplay input is ignored; R6: restart only from here.
             if inputs.restart:
@@ -51,9 +58,12 @@ class Game:
         self._move_drawers(dt)
 
         direction = int(inputs.right) - int(inputs.left)
+        was_standing = self.player.on_ground
         landed = physics.step(
             self.player, direction, inputs.jump, self.level.platforms + self.drawers, self.level.world_width, dt
         )
+        if landed is not None and not was_standing:  # R30: airborne -> standing
+            self._spawn(effects.dust_particles(self.player))
 
         self._collect_treats()  # R10: before the win check, so the winning frame counts
 
@@ -91,6 +101,12 @@ class Game:
         for t in self.visible_treats():
             if p.x < t.x + t.width and p.x + p.width > t.x and p.y < t.y + t.height and p.y + p.height > t.y:
                 self.collected.add(t)
+                self._spawn(effects.sparkle_particles(t))  # R31
+
+    def _spawn(self, new):
+        """Add particles, dropping the oldest beyond MAX_PARTICLES (R31)."""
+        self.particles.extend(new)
+        del self.particles[: max(0, len(self.particles) - config.MAX_PARTICLES)]
 
     def _camera_target(self):
         """R22: centre Albert on both axes, each clamped to the world. Returns (x, y)."""
