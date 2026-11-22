@@ -96,8 +96,9 @@ def jump_between(i, j, wait_frames):
     """Stand on route stop i, wait, then jump towards stop j holding the direction.
     Returns True if Albert lands on stop j."""
     from albert.game import Game, Inputs
+    from conftest import hazard_free_level
 
-    game = Game()
+    game = Game(level=hazard_free_level())  # Round 6: measure drawer timing only, without knockbacks
     a, b = game.level.route[i], game.level.route[j]
     on, target = live(game, a), live(game, b)
     direction = 1 if span_centre(b) > span_centre(a) else -1

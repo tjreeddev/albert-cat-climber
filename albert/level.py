@@ -73,6 +73,23 @@ class Scenery:
     view: str = None
 
 
+@dataclass(frozen=True, eq=False)
+class Hazard:
+    """A timed kitchen hazard (R39): "vent", "burner" or "drip". `top` is the top of
+    its cabinet (for a drip: where the drop starts; `floor` is the cabinet below).
+    Its cycle is idle -> warning -> active, in PLAYING updates. Hazards are not solid."""
+
+    kind: str
+    x: float
+    top: float
+    section: int
+    idle: int
+    warning: int
+    active: int
+    phase: int = 0
+    floor: float = None
+
+
 @dataclass
 class Level:
     platforms: list
@@ -84,6 +101,7 @@ class Level:
     route: list = field(default_factory=list)  # R23 (Round 4): intended stops in order
     decorations: list = field(default_factory=list)  # R28 (Round 5): visual only
     scenery: list = field(default_factory=list)  # R33 (Round 5): visual only, behind everything
+    hazards: list = field(default_factory=list)  # R39 (Round 6): timed kitchen hazards
 
     @property
     def goal_platform(self):
@@ -242,6 +260,21 @@ _SCENERY = [
 ]
 
 
+# R39 (Round 6): hazards H1-H8 (spec.md 12.3), 1/2/2/3 per section, as
+# (kind, section, x, top, idle, warning, active, phase, floor). All sit on static
+# route cabinets; the goal and the stop before it stay hazard-free.
+_HAZARDS = [
+    ("drip", 1, 442, 900, 87, 60, 33, 0, 970),  # H1: teaching drip over (420, 970)
+    ("vent", 2, 722, 768, 90, 45, 45, 0, None),  # H2 on (712, 768)
+    ("vent", 2, 300, 656, 90, 45, 45, 90, None),  # H3 on (292, 656)
+    ("burner", 3, 70, 520, 120, 60, 60, 0, None),  # H4 on (64, 520)
+    ("vent", 3, 696, 370, 90, 45, 45, 45, None),  # H5 on (690, 370)
+    ("vent", 4, 560, 140, 60, 45, 45, 30, None),  # H6 on (556, 140)
+    ("drip", 4, 886, 156, 27, 60, 33, 0, 226),  # H7 over (872, 226)
+    ("burner", 4, 254, 56, 80, 60, 60, 0, None),  # H8 on (246, 56)
+]
+
+
 def _scenery(entry):
     kind, section, x, y, width, height, phase = entry
     view = config.VIEW_BY_SECTION[section] if kind == "window" else None
@@ -266,4 +299,5 @@ def build_level():
         route=route,
         decorations=[Decoration(kind, x, y, section, phase) for kind, section, x, y, phase in _DECORATIONS],
         scenery=[_scenery(entry) for entry in _SCENERY],
+        hazards=[Hazard(kind, x, top, section, i, w, a, ph, fl) for kind, section, x, top, i, w, a, ph, fl in _HAZARDS],
     )

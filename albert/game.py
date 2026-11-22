@@ -6,7 +6,7 @@ Pure Python: must not import pygame.
 from dataclasses import dataclass
 from enum import Enum
 
-from albert import config, effects, physics
+from albert import config, effects, hazards, physics
 from albert.level import build_level
 
 
@@ -42,6 +42,10 @@ class Game:
         self.camera_x, self.camera_y = self._camera_target()  # R22
         self.ticks = 0  # R27: animation clock, in updates
         self.particles = []  # R30/R31: visual only, oldest first
+        self.hazard_ticks = 0  # R40: gameplay hazard clock (PLAYING updates only)
+        self.knockback_ticks = 0  # R44: updates of left/right override left
+        self.knockback_dir = 0
+        self.invulnerable_ticks = 0  # R44: updates until a hazard can hit again
 
     def update(self, inputs, dt):
         # R27-R29: the animation clock and existing particles run in every state.
@@ -55,17 +59,28 @@ class Game:
                 self.restart()
             return
 
+        # R40/R44: hazard clock, invulnerability countdown, knockback override.
+        self.hazard_ticks += 1
+        if self.invulnerable_ticks > 0:
+            self.invulnerable_ticks -= 1
+        direction, jump = int(inputs.right) - int(inputs.left), inputs.jump
+        if self.knockback_ticks > 0:
+            direction, jump = self.knockback_dir, False
+            self.knockback_ticks -= 1
+
         self._move_drawers(dt)
 
-        direction = int(inputs.right) - int(inputs.left)
         was_standing = self.player.on_ground
         landed = physics.step(
-            self.player, direction, inputs.jump, self.level.platforms + self.drawers, self.level.world_width, dt
+            self.player, direction, jump, self.level.platforms + self.drawers, self.level.world_width, dt
         )
         if landed is not None and not was_standing:  # R30: airborne -> standing
             self._spawn(effects.dust_particles(self.player))
 
         self._collect_treats()  # R10: before the win check, so the winning frame counts
+
+        if landed is not self.level.goal_platform:  # R44: a win takes priority over a hit
+            self._check_hazards()
 
         if self.player.y > self.level.world_height:  # R4: top edge below the world
             self.state = GameState.LOST
@@ -102,6 +117,21 @@ class Game:
             if p.x < t.x + t.width and p.x + p.width > t.x and p.y < t.y + t.height and p.y + p.height > t.y:
                 self.collected.add(t)
                 self._spawn(effects.sparkle_particles(t))  # R31
+
+    def _check_hazards(self):
+        """R41-R44: the first active hazard touching Albert knocks him back."""
+        if self.invulnerable_ticks > 0:
+            return
+        p = self.player
+        for h in self.level.hazards:
+            if hazards.touches(h, self.hazard_ticks, p, self.level.platforms):
+                x, _, w, _ = hazards.hit_area(h, self.hazard_ticks)
+                self.knockback_dir = 1 if p.x + p.width / 2 >= x + w / 2 else -1
+                p.vy, p.on_ground = -config.KNOCKBACK_SPEED, False
+                self.knockback_ticks = config.KNOCKBACK_TICKS
+                self.invulnerable_ticks = config.INVULNERABLE_TICKS
+                self._spawn(effects.puff_particles(p))
+                return
 
     def _spawn(self, new):
         """Add particles, dropping the oldest beyond MAX_PARTICLES (R31)."""

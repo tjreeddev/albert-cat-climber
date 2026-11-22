@@ -3,7 +3,7 @@ HUD, overlays, and pixel-perfect scaling (R7)."""
 
 import pygame
 
-from albert import config, effects
+from albert import config, effects, hazards
 from albert.game import GameState, hud_text
 from albert.sprites import render_text
 
@@ -126,8 +126,59 @@ def _draw_particles(canvas, game, cam_x, cam_y):
             pygame.draw.rect(canvas, C["brass"], (x - 1, y, 3, 1))
             pygame.draw.rect(canvas, C["brass"], (x, y - 1, 1, 3))
         else:
-            colour = C["text_white"] if p.kind == "sparkle" else C["counter_shade"]
+            colour = C["counter_shade"] if p.kind == "dust" else C["text_white"]  # sparkle or hit puff
             pygame.draw.rect(canvas, colour, (x, y, 1, 1))
+
+
+def _hazard_look(h, hazard_ticks):
+    """R45: (phase, time into that phase) for drawing a hazard."""
+    t = hazards.cycle_time(h, hazard_ticks)
+    phase = hazards.phase_of(h, hazard_ticks)
+    start = {"idle": 0, "warning": h.idle, "active": h.idle + h.warning}[phase]
+    return phase, t - start
+
+
+def _blit_world(canvas, sprite, x, y, cam_x, cam_y, screen):
+    rect = sprite.get_rect(topleft=(round(x) - cam_x, round(y) - cam_y))
+    if rect.colliderect(screen):
+        canvas.blit(sprite, rect)
+
+
+def _draw_hazard_bases(canvas, game, sprites, cam_x, cam_y, screen):
+    """R45: burner rings, vents, taps and forming drops (behind treats and Albert)."""
+    for h in game.level.hazards:
+        phase, k = _hazard_look(h, game.hazard_ticks)
+        if h.kind == "burner":
+            name = {"idle": "hz_burner_idle", "warning": "hz_burner_warn"}.get(phase, f"hz_burner_hot_{k // 8 % 2}")
+            _blit_world(canvas, sprites[name], h.x, h.top - 3, cam_x, cam_y, screen)
+        elif h.kind == "vent":
+            vh = config.VENT_SIZE[1]
+            name = {"idle": "hz_vent_idle", "warning": f"hz_vent_warn_{k // 6 % 2}"}.get(phase, "hz_vent_warn_0")
+            _blit_world(canvas, sprites[name], h.x, h.top - vh, cam_x, cam_y, screen)
+        else:
+            tap = "hz_tap_warn" if phase == "warning" else "hz_tap"
+            _blit_world(canvas, sprites[tap], h.x - 2, h.top - 8, cam_x, cam_y, screen)
+            if phase == "warning":
+                size = min(2, k * 3 // h.warning)
+                _blit_world(canvas, sprites[f"hz_drop_form_{size}"], h.x, h.top, cam_x, cam_y, screen)
+
+
+def _draw_hazard_dangers(canvas, game, sprites, cam_x, cam_y, screen):
+    """R45: active steam jets and falling drops (in front of treats, behind Albert)."""
+    for h in game.level.hazards:
+        area = hazards.hit_area(h, game.hazard_ticks)
+        if area is None or h.kind == "burner":
+            continue
+        if h.kind == "vent":
+            _, k = _hazard_look(h, game.hazard_ticks)
+            _blit_world(canvas, sprites[f"hz_jet_{k // 6 % 2}"], area[0], area[1], cam_x, cam_y, screen)
+        else:
+            _blit_world(canvas, sprites["hz_drop"], area[0], area[1], cam_x, cam_y, screen)
+
+
+def _albert_visible(game):
+    """R44/R45: Albert flashes while invulnerable after a hit."""
+    return game.invulnerable_ticks == 0 or (game.invulnerable_ticks // 4) % 2 == 0
 
 
 def draw(canvas, game, sprites):
@@ -164,15 +215,22 @@ def draw(canvas, game, sprites):
     # Mugs and pots on the cabinets (R28).
     _draw_decorations(canvas, game, sprites, {"mug", "pot"}, on_screen, screen)
 
+    # Hazards (R45): burner rings, vents, taps and forming drops.
+    _draw_hazard_bases(canvas, game, sprites, cam_x, cam_y, screen)
+
     # Treats not yet collected this run (R10).
     for t in game.visible_treats():
         rect = on_screen(t)
         if rect.colliderect(screen):
             canvas.blit(sprites["treat"], rect)
 
-    # Albert.
+    # Active steam jets and falling drops (R41/R43).
+    _draw_hazard_dangers(canvas, game, sprites, cam_x, cam_y, screen)
+
+    # Albert, flashing while invulnerable (R44).
     player = game.player
-    canvas.blit(_cat_frame(player, sprites), on_screen(player))
+    if _albert_visible(game):
+        canvas.blit(_cat_frame(player, sprites), on_screen(player))
 
     # Landing dust and treat sparkles (R30/R31), in front of Albert.
     _draw_particles(canvas, game, cam_x, cam_y)

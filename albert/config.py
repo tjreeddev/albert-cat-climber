@@ -47,6 +47,19 @@ BIRD_LOOP = 160
 SCENERY_FRAMES = {"garden": (45, 2), "town": (20, 3), "city": (50, 2), "curtain": (30, 4), "plant": (50, 2)}
 CURTAIN_SEQUENCE = (0, 1, 2, 1)  # art frame for each curtain animation step
 
+# --- Kitchen hazards (Round 6, R39-R46); times are in PLAYING updates ---
+VENT_SIZE = (16, 8)
+JET_SIZE = (12, 56)  # the steam jet's hit area and sprite
+BURNER_WIDTH = 16
+DROP_SIZE = (4, 6)
+DRIP_SPEED = 2  # px per update (120 px/s)
+KNOCKBACK_SPEED = 180  # upward speed after a hit (px/s)
+KNOCKBACK_TICKS = 18  # updates of left/right override after a hit (0.3 s)
+INVULNERABLE_TICKS = 60  # updates without hits after a hit (1 s)
+HIT_PUFF_COUNT = 6
+HIT_PUFF_SPEED = 30.0  # px/s
+HIT_PUFF_LIFE = 15
+
 # --- Physics (world pixels and seconds; y grows downward) ---
 MOVE_SPEED = 100.0  # horizontal speed while a direction is held (R1)
 GRAVITY = 900.0  # downward acceleration (R2)
@@ -84,5 +97,8 @@ COLORS = {
     "stone_grey": (156, 158, 176),
     "building_blue": (104, 120, 160),
     "hill_green": (150, 200, 128),
+    # Round 6 hazards (R45): warning colours used by nothing else
+    "warn_orange": (255, 152, 32),
+    "warn_red": (240, 36, 52),
 }
 PALETTE = list(COLORS.values())

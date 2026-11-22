@@ -70,6 +70,17 @@ def reachable_from(start, stops, margin):
                 todo.append(b)
     return seen
 
+def hazard_free_level():
+    """The default level without its Round 6 hazards. Earlier-round tests that check
+    R1-R38 behaviour on the real level use it, so a knockback can't change what they
+    measure (approved for Round 6). Import with `from conftest import hazard_free_level`."""
+    from albert.level import build_level
+
+    level = build_level()
+    level.hazards = []
+    return level
+
+
 # A small, high platform placed in the top-left corner of custom test levels so
 # that it is the goal (highest) platform and the platforms under test are not.
 DECOY_GOAL = (0, 0, 8, 4)
@@ -86,6 +97,7 @@ def make_game():
     drawers:   optional list of dicts of level.Drawer keyword arguments (Round 3)
     decorations: optional list of (kind, x, y) decorations (Round 5), section 1, phase 0
     scenery:   optional list of dicts of level.Scenery keyword arguments (Round 5, R33-R38)
+    hazards:   optional list of dicts of level.Hazard keyword arguments (Round 6, R39-R46)
     """
 
     def _make(
@@ -98,6 +110,7 @@ def make_game():
         drawers=(),
         decorations=(),
         scenery=(),
+        hazards=(),
     ):
         from albert.game import Game
         from albert.level import Level, Platform
@@ -119,6 +132,10 @@ def make_game():
             from albert.level import Scenery
 
             extra["scenery"] = [Scenery(**s) for s in scenery]
+        if hazards:
+            from albert.level import Hazard
+
+            extra["hazards"] = [Hazard(**h) for h in hazards]
         specs = list(platforms) + ([DECOY_GOAL] if add_decoy_goal else [])
         level = Level(
             platforms=[Platform(*p) for p in specs],

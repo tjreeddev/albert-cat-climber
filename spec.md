@@ -1,10 +1,10 @@
-# Albert Cat Climber — Specification (Rounds 1–5)
+# Albert Cat Climber — Specification (Rounds 1–6)
 
 ## 1. Overview
 
 Albert Cat Climber is a small 2D platformer based on the developer's black cat, Albert. The player guides Albert up a tower of kitchen cabinets. The goal is to reach the highest cabinet without falling.
 
-Round 1 is deliberately small. It covers only the requirements R1–R8 from `problem.md`. Round 2 adds one feature, optional cat treats (R9–R14), described in section 8. R1–R8 are unchanged. Round 3 adds one feature, two horizontally moving cabinet drawers (R15–R20), described in section 9. R1–R14 behaviour is unchanged; the only Round 1 change is that two route cabinets become drawers (section 9.1). Round 4 replaces the compact tower with a large kitchen level, a camera that scrolls on both axes, and a longer route through four progressively harder sections (R21–R26), described in section 10. Albert's physics and the R1–R20 rules are unchanged; the level size, layout and the treat and drawer counts are revised (section 10.1). Round 5 adds visual-only kitchen animation and effects (R27–R32), described in section 11: looping decorations, landing dust and a treat sparkle. Gameplay is unchanged. Section 11.5 expands Round 5 with large background scenery (R33–R38): windows with animated outdoor views that change with height, curtains, plants, pictures and tiled panels.
+Round 1 is deliberately small. It covers only the requirements R1–R8 from `problem.md`. Round 2 adds one feature, optional cat treats (R9–R14), described in section 8. R1–R8 are unchanged. Round 3 adds one feature, two horizontally moving cabinet drawers (R15–R20), described in section 9. R1–R14 behaviour is unchanged; the only Round 1 change is that two route cabinets become drawers (section 9.1). Round 4 replaces the compact tower with a large kitchen level, a camera that scrolls on both axes, and a longer route through four progressively harder sections (R21–R26), described in section 10. Albert's physics and the R1–R20 rules are unchanged; the level size, layout and the treat and drawer counts are revised (section 10.1). Round 5 adds visual-only kitchen animation and effects (R27–R32), described in section 11: looping decorations, landing dust and a treat sparkle. Gameplay is unchanged. Section 11.5 expands Round 5 with large background scenery (R33–R38): windows with animated outdoor views that change with height, curtains, plants, pictures and tiled panels. Round 6 adds 8 timed kitchen hazards (steam vents, hot burners and dripping taps) that knock Albert back (R39–R46), described in section 12. Physics, the layout, the camera and the win/lose rules are unchanged.
 
 ## 2. Scope
 
@@ -20,7 +20,7 @@ Round 1 is deliberately small. It covers only the requirements R1–R8 from `pro
 ### Out of scope (Round 1)
 Collectibles, enemies, moving platforms, multiple levels, sound or music, power-ups, score/timer, menus beyond the win/lose overlay, save data, and anything else not required by `problem.md`.
 
-Round 2 lifts the "collectibles" exclusion for cat treats only (section 8). Round 3 lifts the "moving platforms" exclusion for horizontally moving drawers only (section 9; six of them from Round 4). Round 5 adds non-interactive decorations and particle effects only (section 11). Everything else above stays out of scope.
+Round 2 lifts the "collectibles" exclusion for cat treats only (section 8). Round 3 lifts the "moving platforms" exclusion for horizontally moving drawers only (section 9; six of them from Round 4). Round 5 adds non-interactive decorations and particle effects only (section 11). Round 6 adds timed, static kitchen hazards with knockback only (section 12). Enemies, lives and checkpoints stay out of scope. Everything else above stays out of scope.
 
 ## 3. Technical decisions
 
@@ -564,3 +564,129 @@ No new modules are added. The shared jump-reach helpers live in `tests/conftest.
 | R7 (extended) | `tests/test_art_style.py` | Scenery sprites follow the palette, colour-count and transparency rules; the R35–R38 render checks |
 
 No new modules. Scenery data lives in `level.py`, its animation helpers in `effects.py`, its sprites in `sprites.py` and its drawing in `render.py`.
+
+## 12. Round 6 — Kitchen hazards (R39–R46)
+
+### 12.1 Scope
+- **In scope:** three kinds of static, timed kitchen hazards (steam vents, hot burners and dripping taps), 8 in the default level. Touching an active hazard knocks Albert back, takes away left/right control for a moment, and makes him briefly flash and unhittable.
+- **Out of scope:** swinging or moving hazards (saved for a later round), enemies, lives, health, checkpoints, damage numbers, instant-loss hazards, hazards on drawers, random timing, sound or music, and anything else not listed here.
+- **Unchanged:**
+  - Albert's physics constants and `physics.py`;
+  - the controls, except the approved 0.3 s left/right override after a hit;
+  - the camera;
+  - the cabinet, drawer and treat layout and `Level.route`;
+  - drawer motion and riding;
+  - treat collection and the HUD;
+  - win, lose and restart rules;
+  - every Round 5 decoration, effect and scenery item.
+  
+  Losing is still only falling below the world (R4). A knockback can lead to that, but a hazard never causes a loss directly.
+- **Approved additions:**
+  - `Level.hazards`, fixed hazard definitions;
+  - a gameplay hazard clock, separate from the visual-only `Game.ticks`;
+  - a new pure module `albert/hazards.py` (no pygame) for hazard timing and hit areas;
+  - stovetop art on burner cabinets, with their collision unchanged.
+
+### 12.2 Decisions
+| Topic | Decision |
+|---|---|
+| Data | `Level.hazards` is a list of `level.Hazard(kind, x, top, section, idle, warning, active, phase=0, floor=None)` (default: empty). `kind` is `"vent"`, `"burner"` or `"drip"`. `top` is the top of the cabinet the hazard is on; for a drip it is the y where the drop starts, and `floor` is the top of the cabinet below it. Hazards are never in `Level.platforms` and are not solid. |
+| Hazard clock | `Game.hazard_ticks` starts at 0 and is reset to 0 by `restart()`. At the start of each update while `PLAYING`, three things happen in order: `hazard_ticks` goes up by 1 (that value is used for the whole update); `invulnerable_ticks` goes down by 1 if it is positive; and if `knockback_ticks` is positive, the inputs are overridden (see Knockback) and it goes down by 1. It doesn't change in `WON` or `LOST`. Gameplay never reads `Game.ticks` (R32 still holds). |
+| Cycle | `cycle = idle + warning + active`. With `t = (hazard_ticks + phase) % cycle`, `hazards.phase_of(hazard, hazard_ticks)` returns `"idle"` when `t < idle`, `"warning"` when `idle ≤ t < idle + warning`, and `"active"` otherwise. Only `"active"` can hit. |
+| Steam vent | A `VENT_SIZE` = 16×8 vent sits on the cabinet at `(x, top − 8)`. While active, its jet's hit area is `(x + 2, top − 56, 12, 56)`: 12 px wide, from the cabinet top up 56 px. Albert is hit when his hitbox overlaps it with positive area, standing or in mid-air. |
+| Hot burner | A `BURNER_WIDTH` = 16 px stovetop strip on the cabinet top from `x` to `x + 16`. While active, Albert is hit when he is standing (`on_ground`) on that cabinet and his hitbox overlaps the strip horizontally with positive length. Passing through or jumping over the cabinet is safe. |
+| Dripping tap | A tap hangs at `(x − 2, top − 8)`, 8×8. During the warning a drop forms at the tap in 3 growing sizes, which can't hit. While active, a `DROP_SIZE` = 4×6 drop falls at `DRIP_SPEED` = 2 px per update (120 px/s). In active update k (0, 1, …) the drop's top-left is `(x, top + 2k)`. `active` equals `(floor − 6 − top) / 2 + 1`, so the drop's last active position rests exactly on `floor` (it splashes there). Albert is hit when his hitbox overlaps the drop with positive area. |
+| Hit check | `hazards.hit_area(hazard, hazard_ticks)` returns the hit rectangle `(x, y, w, h)` while active, or `None` otherwise. For a burner it is the strip `(x, top − 1, 16, 1)`, together with the standing rule above. |
+| Update order (while `PLAYING`) | Hazard clock, invulnerability and knockback countdowns → move drawers and carry Albert → physics → landing dust → collect treats and sparkles → hazard hits → lose/win check → camera. **The win takes priority:** on an update where Albert lands on the goal, no hazard hit is applied. |
+| Knockback | On a hit:<br>• `player.vy = −KNOCKBACK_SPEED` (180 px/s) and `on_ground = False`;<br>• `Game.knockback_dir` is +1 if Albert's centre x ≥ the hit area's centre x, otherwise −1;<br>• `Game.knockback_ticks = KNOCKBACK_TICKS` (18, 0.3 s);<br>• `Game.invulnerable_ticks = INVULNERABLE_TICKS` (60, 1 s).<br>On each of the next 18 `PLAYING` updates, left/right comes from `knockback_dir` instead of the input, and jump is ignored. Albert is clamped at the walls as usual. |
+| Invulnerability | Hits are checked only when `invulnerable_ticks` is 0. After a hit on update U, updates U+1 to U+59 can't hit, and update U+60 (when the count reaches 0) can hit again. |
+| Hit effect | A hit spawns `HIT_PUFF_COUNT` = 6 `"puff"` particles at Albert's centre through `effects.puff_particles(player)` (visual only). Their velocities follow the sparkle formula at 30 px/s, they last 15 ticks, and each is drawn 1×1 `text_white`. |
+| Flashing | While `invulnerable_ticks > 0`, Albert isn't drawn on updates where `(invulnerable_ticks // 4) % 2 == 1`. |
+| States and restart | Hazards, knockback and invulnerability freeze in `WON` and `LOST`. `restart()` sets `hazard_ticks`, `knockback_ticks` and `invulnerable_ticks` to 0. |
+| Telegraph art | Two new palette colours, `warn_orange` and `warn_red`, are used only by hazard sprites; no decoration or scenery sprite uses them.<br>• **Vent:** idle is a dark-grey vent with an unlit light. Warning alternates two "rattle" frames every 6 ticks, with `warn_red` lit and small sputters. Active is a solid jet at least 10 px wide (2 frames every 6 ticks), much bigger than the 1–2 px decorative steam wisps.<br>• **Burner:** idle coils are grey; warning coils are `warn_orange`; active coils are `warn_red`, with a 2-frame shimmer every 8 ticks.<br>• **Drip:** the tap carries a `warn_red` collar while the drop forms; the falling drop is drawn in sky blue with a white highlight.<br>Sprite keys: `hz_vent_idle`, `hz_vent_warn_0/1`, `hz_jet_0/1`, `hz_burner_idle`, `hz_burner_warn`, `hz_burner_hot_0/1`, `hz_tap`, `hz_tap_warn`, `hz_drop_form_0..2`, `hz_drop`. |
+| Draw order | Wallpaper → scenery → clocks → cabinets, with burner strips drawn on their cabinet tops → drawers → mugs and pots → vents, taps and forming drops → treats → jets and falling drops → Albert → particles → HUD → overlay. |
+| Constants | `config.py` holds `VENT_SIZE`, `JET_SIZE` (12, 56), `BURNER_WIDTH`, `DROP_SIZE`, `DRIP_SPEED`, `KNOCKBACK_SPEED`, `KNOCKBACK_TICKS`, `INVULNERABLE_TICKS`, `HIT_PUFF_COUNT` and the two warning colours. |
+
+### 12.3 Default hazards
+Every hazard sits on a static cabinet on `Level.route`, never on the goal cabinet, the starting counter or a drawer. Counts per section are 1, 2, 2 and 3.
+
+| # | Section | Kind | Cabinet `(x, y, w)` | Hazard `x` | Other fields | `idle / warning / active` (cycle) | Phase |
+|---|---|---|---|---|---|---|---|
+| H1 | 1 | drip (teaching) | (420, 970, 48) | 442 | top 900, floor 970 | 87 / 60 / 33 (180) | 0 |
+| H2 | 2 | vent | (712, 768, 36) | 722 | top 768 | 90 / 45 / 45 (180) | 0 |
+| H3 | 2 | vent | (292, 656, 32) | 300 | top 656 | 90 / 45 / 45 (180) | 90 |
+| H4 | 3 | burner | (64, 520, 28) | 70 | top 520 | 120 / 60 / 60 (240) | 0 |
+| H5 | 3 | vent | (690, 370, 28) | 696 | top 370 | 90 / 45 / 45 (180) | 45 |
+| H6 | 4 | vent | (556, 140, 24) | 560 | top 140 | 60 / 45 / 45 (150) | 30 |
+| H7 | 4 | drip | (872, 226, 24) | 886 | top 156, floor 226 | 27 / 60 / 33 (120) | 0 |
+| H8 | 4 | burner | (246, 56, 24) | 254 | top 56 | 80 / 60 / 60 (200) | 0 |
+
+None of these overlaps a treat, decoration or drawer path. Per section, the shortest cycle never gets longer and the hazard count never goes down. The goal cabinet and the stop before it, (180, 40), have no hazards, so the final jump to the goal is hazard-free. `Level.hazards` lists H1–H8 in this order.
+
+### 12.4 Requirements and acceptance criteria
+
+#### R39 — The kitchen has 8 placed hazards
+- The default level has exactly 8 hazards, 1/2/2/3 in sections 1–4: 4 vents, 2 burners and 2 drips, as in 12.3.
+- Each vent and burner lies horizontally within a static route cabinet of its section, with `top` equal to that cabinet's top. Each drip's `floor` is such a cabinet's top, and its drop lies within the cabinet.
+- No hazard is on the goal cabinet, the route stop just before the goal, the starting counter or a drawer path.
+- No hazard's areas (vent, jet, burner strip, tap, drop path) overlap a treat or decoration.
+- Everything lies inside the world, and playing never changes `Level.hazards`.
+
+#### R40 — Hazards follow a deterministic, freezable gameplay clock
+- `hazard_ticks` is 0 at the start and after `restart()`. It goes up by 1 per `PLAYING` update and stays unchanged in `WON` and `LOST`.
+- `phase_of` follows 12.2 and loops with period `cycle`, and `phase` shifts it.
+- Two games given the same inputs have the same hazard phases, knockback and invulnerability state after every update.
+- Hazards don't depend on `Game.ticks`: changing `Game.ticks` changes no hazard result.
+
+#### R41 — Steam vents
+- When active, the jet's hit area is exactly as in 12.2. In idle and warning, `hit_area` is `None`.
+- Standing in the jet, or jumping or falling through it, while active hits Albert. Standing next to it doesn't, and touching only an edge doesn't.
+- Albert passes through the vent box; it isn't a platform.
+
+#### R42 — Hot burners
+- While active, standing on the cabinet over the strip hits Albert.
+- These don't hit: standing on the same cabinet clear of the strip, being in mid-air above it, jumping up through the cabinet, and standing there while idle or warning.
+- The cabinet's collision is the same as a normal cabinet's.
+
+#### R43 — Dripping taps
+- During the warning the drop can't hit. While active, the drop's position follows 12.2, and its last active position rests on `floor`.
+- A falling drop touching Albert hits him, standing or in mid-air. The drop never hits during idle.
+
+#### R44 — Knockback, control override and invulnerability
+- A hit sets `vy`, `on_ground`, `knockback_dir`, `knockback_ticks` and `invulnerable_ticks` as in 12.2.
+- For the next 18 `PLAYING` updates, left/right input is replaced by `knockback_dir` and jump is ignored. From the 19th, input works normally.
+- The 59 updates after a hit can't hit. The 60th can.
+- If Albert lands on the goal on the same update as a hit would happen, the game is won and no hit is applied.
+- A hit spawns 6 puff particles. Treats, the treat count and the HUD are unchanged by hits.
+- A knockback that carries Albert out of the world loses through R4, and only through R4.
+- Restart clears the knockback and invulnerability, and the restart rules for R6, R13, R20, R26 and R32 still hold.
+
+#### R45 — Hazards are clearly telegraphed and look different from decorations
+- Every hazard's warning lasts at least 45 updates (0.75 s) and comes directly before its active phase.
+- The `hz_*` sprites in 12.2 exist and follow R7: palette colours only, at most 16 colours, no semi-transparency.
+- Every warning-state sprite uses `warn_orange` or `warn_red`, and no decoration (`mug_*`, `pot_*`, `clock_*`) or scenery (`scn_*`) sprite uses either.
+- An active jet has at least 10 opaque columns, while a decorative steam frame has at most 2 opaque `text_white` columns per row.
+- In a headless render, a hazard's pixels differ between idle, warning and active. Albert is hidden on flashing updates and drawn otherwise.
+
+#### R46 — The route stays beatable, and earlier rules are unchanged
+- Every hazard's cycle has a non-active run of at least 75 updates (1.25 s): idle plus warning.
+- **Crossing test:** for each hazard, the default level is used with only that hazard in it. Albert stands on the previous route stop: at its edge nearest the hazard cabinet, or centred on it if it is a drawer. A drawer neighbour is placed at its end nearest the hazard cabinet, moving away from that end. The hazard clock is set so the next update is the first update of the cycle (t = 0).
+- **The script:** wait `w0` updates, then jump toward the hazard cabinet, holding that direction until Albert lands on it. Then walk toward the next stop for `w1` updates, then jump toward it, holding that direction until he lands on it.
+- **Values:** `(w0, w1)` is (0, 0) for every hazard except H7, which uses (50, 12).
+- **Pass:** Albert ends standing on the next stop, with no hit and still `PLAYING`. Starting at the same point in 3 consecutive cycles gives the same result and the same number of updates.
+- Removing all hazards doesn't change how R1–R38 gameplay behaves in their tests' scenarios.
+- The physics constants keep their Round 1 values. Landing on the goal still wins, and falling below the world still loses.
+
+### 12.5 Automated test plan (Round 6)
+| Requirement | Test file | What the tests check |
+|---|---|---|
+| R39 | `tests/test_hazard_placement.py` | Count and kinds per section; the 12.3 data; on static route cabinets; not on the goal, counter or drawers; no overlap with treats or decorations; inside the world; data unchanged |
+| R40 | `tests/test_hazard_clock.py` | Clock starts at 0, advances only while PLAYING, frozen in WON/LOST, reset by restart; `phase_of` formula, period and phase; deterministic; independent of `Game.ticks` |
+| R41 | `tests/test_steam_vents.py` | Jet area; hit when standing, rising or falling in it; no hit beside it, on an edge, or while idle/warning; vent not solid |
+| R42 | `tests/test_burners.py` | Hit standing on the strip while active; no hit clear of the strip, mid-air, rising through, or while idle/warning; collision unchanged |
+| R43 | `tests/test_drips.py` | No hit while forming; drop path formula; last position rests on the floor; hit standing or in mid-air; no hit while idle |
+| R44 | `tests/test_knockback.py` | The hit sets each value; 18-update override then normal control; jump ignored; 60-update invulnerability; can be hit again afterwards; puffs; treats/HUD unaffected; out-of-world only via R4; restart clears everything |
+| R45 | `tests/test_hazard_telegraph.py` (pure parts) and `tests/test_art_style.py` (sprites and renders) | Sprite rules; warning colours used only by hazards; jet width and wisp width; idle, warning and active pixels differ; flashing |
+| R46 | `tests/test_hazard_fairness.py` | Non-active run of at least 75; scripted crossing at every hazard over 3 cycles; earlier scenarios unchanged without hazards; physics pinned |
+
+`albert/hazards.py` is the only new module. It must not import pygame.

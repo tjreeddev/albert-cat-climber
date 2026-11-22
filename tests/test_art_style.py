@@ -335,6 +335,118 @@ def test_r38_gameplay_objects_look_the_same_with_scenery_behind_them(sprites):
     assert _glass(a) != _glass(b)
 
 
+# --- Round 6 hazards (R45) ---
+
+HAZARD_SPRITES = [
+    "hz_vent_idle", "hz_vent_warn_0", "hz_vent_warn_1", "hz_jet_0", "hz_jet_1",
+    "hz_burner_idle", "hz_burner_warn", "hz_burner_hot_0", "hz_burner_hot_1",
+    "hz_tap", "hz_tap_warn", "hz_drop_form_0", "hz_drop_form_1", "hz_drop_form_2", "hz_drop",
+]
+WARNING_SPRITES = ["hz_vent_warn_0", "hz_vent_warn_1", "hz_burner_warn", "hz_tap_warn"]
+
+
+@pytest.mark.parametrize("name", HAZARD_SPRITES)
+def test_r45_hazard_sprite_follows_the_pixel_art_rules(sprites, name):
+    assert name in sprites
+    surface = sprites[name]
+    used = set(opaque_colours(surface))
+    palette = {tuple(c) for c in config.PALETTE}
+    assert used and used <= palette, name
+    assert len(used) <= 16
+    w, h = surface.get_size()
+    assert {surface.get_at((x, y)).a for x in range(w) for y in range(h)} <= {0, 255}
+
+
+def test_r45_hazard_sprite_sizes(sprites):
+    assert sprites["hz_vent_idle"].get_size() == config.VENT_SIZE
+    assert sprites["hz_jet_0"].get_size() == config.JET_SIZE
+    assert sprites["hz_drop"].get_size() == config.DROP_SIZE
+    assert sprites["hz_burner_hot_0"].get_width() == config.BURNER_WIDTH
+
+
+@pytest.mark.parametrize("name", WARNING_SPRITES)
+def test_r45_warning_sprites_use_a_warning_colour(sprites, name):
+    warn = {config.COLORS["warn_orange"], config.COLORS["warn_red"]}
+    assert set(opaque_colours(sprites[name])) & warn, name
+
+
+def test_r45_no_decoration_or_scenery_uses_warning_colours(sprites):
+    warn = {config.COLORS["warn_orange"], config.COLORS["warn_red"]}
+    for name, surface in sprites.items():
+        if name.startswith(("mug_", "pot_", "clock_", "scn_")):
+            assert not set(opaque_colours(surface)) & warn, name
+
+
+def test_r45_hazard_jets_are_much_wider_than_decorative_steam(sprites):
+    for name in ("hz_jet_0", "hz_jet_1"):
+        jet = sprites[name]
+        w, h = jet.get_size()
+        columns = {x for x in range(w) for y in range(h) if jet.get_at((x, y)).a}
+        assert len(columns) >= 10, name
+    white = config.COLORS["text_white"]
+    for name, steam_rows in [(f"mug_{i}", 8) for i in range(4)] + [(f"pot_{i}", 10) for i in range(4)]:
+        s = sprites[name]
+        for y in range(steam_rows):
+            count = sum(1 for x in range(s.get_width()) if s.get_at((x, y)).a and tuple(s.get_at((x, y)))[:3] == white)
+            assert count <= 2, (name, y)
+
+
+def _hazard_game(hazard):
+    from albert.game import Game
+    from albert.level import Hazard, Level, Platform
+
+    level = Level(
+        platforms=[Platform(0, 160, 320, 16), Platform(100, 120, 48, 16), Platform(0, 0, 8, 4)],
+        world_width=config.INTERNAL_WIDTH,
+        world_height=config.INTERNAL_HEIGHT,
+        start=(8, 160 - config.PLAYER_HEIGHT),
+        hazards=[Hazard(**hazard)],
+    )
+    return Game(level=level)
+
+
+HAZARD_SCENES = {
+    # hazard on the (100, 120, 48) cabinet; region (x, y, w, h) covering everything it draws
+    "vent": (dict(kind="vent", x=110, top=120, section=1, idle=10, warning=10, active=10), (106, 60, 24, 62)),
+    "burner": (dict(kind="burner", x=116, top=120, section=1, idle=10, warning=10, active=10), (112, 112, 24, 12)),
+    "drip": (dict(kind="drip", x=124, top=60, section=1, idle=10, warning=10, active=28, floor=120), (118, 48, 16, 74)),
+}
+
+
+@pytest.mark.parametrize("kind", list(HAZARD_SCENES))
+def test_r45_idle_warning_and_active_look_different(sprites, kind):
+    from albert.render import draw
+
+    hazard, region = HAZARD_SCENES[kind]
+    game = _hazard_game(hazard)
+    looks = []
+    for t in (0, 10, 20):  # idle, warning, first active update
+        game.hazard_ticks = t
+        canvas = pygame.Surface((config.INTERNAL_WIDTH, config.INTERNAL_HEIGHT))
+        draw(canvas, game, sprites)
+        looks.append(pygame.image.tobytes(canvas.subsurface(pygame.Rect(region)), "RGB"))
+    assert len(set(looks)) == 3, kind
+
+
+def test_r45_albert_flashes_while_invulnerable(sprites):
+    from albert.render import draw
+
+    game = _hazard_game(HAZARD_SCENES["vent"][0])
+    p = game.player
+    albert = pygame.Rect(round(p.x), round(p.y), p.width, p.height)
+
+    def look(invulnerable):
+        game.invulnerable_ticks = invulnerable
+        canvas = pygame.Surface((config.INTERNAL_WIDTH, config.INTERNAL_HEIGHT))
+        draw(canvas, game, sprites)
+        return pygame.image.tobytes(canvas.subsurface(albert), "RGB")
+
+    normal = look(0)
+    assert look(4) != normal, "(4 // 4) % 2 == 1: hidden"
+    assert look(8) == normal, "(8 // 4) % 2 == 0: drawn"
+    assert look(60) != normal and look(56) == normal
+
+
 def test_r7_albert_is_a_black_cat_with_a_visible_highlight(sprites):
     colours = opaque_colours(sprites["cat_idle"])
     dark = sum(1 for c in colours if luminance(c) < 64)

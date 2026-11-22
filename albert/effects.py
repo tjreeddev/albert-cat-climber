@@ -49,6 +49,14 @@ def sparkle_particles(treat):
     return [Particle("sparkle", cx, cy, speed * math.sin(a), -speed * math.cos(a), config.SPARKLE_LIFE) for a in angles]
 
 
+def puff_particles(player):
+    """R44: a ring of steam puffs from Albert's centre when a hazard hits him."""
+    cx, cy = player.x + player.width / 2, player.y + player.height / 2
+    speed, n = config.HIT_PUFF_SPEED, config.HIT_PUFF_COUNT
+    angles = [2 * math.pi * k / n for k in range(n)]
+    return [Particle("puff", cx, cy, speed * math.sin(a), -speed * math.cos(a), config.HIT_PUFF_LIFE) for a in angles]
+
+
 def step_particles(particles, dt):
     """Move each particle by velocity * dt, age it by one update, and drop expired ones."""
     for p in particles:

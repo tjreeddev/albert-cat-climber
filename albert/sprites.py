@@ -511,6 +511,114 @@ def _scenery_sprites():
     return sprites
 
 
+# --- Round 6 hazards (R45) ---
+# Warning orange and red appear only here, so a glow always means danger.
+_HZ_KEY = {
+    "k": C["panel"],
+    "p": C["cat_rim"],
+    "t": C["stone_grey"],
+    "W": C["text_white"],
+    "s": C["sky_light"],
+    "S": C["sky_blue"],
+    "G": C["cat_shade"],
+    "o": C["warn_orange"],
+    "r": C["warn_red"],
+}
+
+
+def _hz(rows):
+    return surface_from_map(rows, _HZ_KEY)
+
+
+def _vent(light, lid_up):
+    """A 16x8 steam vent: a grille box with a lid and a light. When the lid
+    rattles up, steam sputters out of the gap below it."""
+    lid = ["..pppppppppppp..", "..pttttttttttp.."]
+    body = [
+        ".pppppppppppppp.",
+        ".pkpkpkpkpkp" + light * 2 + "p.",
+        ".pkpkpkpkpkp" + light * 2 + "p.",
+        ".pppppppppppppp.",
+        "pppppppppppppppp",
+    ]
+    if lid_up:
+        return _hz(lid + ["..W...W....W.W.."] + body)
+    return _hz(["." * 16] + lid + body)
+
+
+def _jet(frame):
+    """A 12x56 solid column of steam, billowing out at the top."""
+    w, h = config.JET_SIZE
+    rows = []
+    for y in range(h):
+        wobble = (y // 4 + frame) % 2
+        if y < 8:  # billowing cloud top
+            width = 6 + y // 2 * 2
+            pad = (w - width) // 2
+            row = "." * pad + "W" * width + "." * (w - pad - width)
+        else:
+            left, right = wobble, w - (1 - wobble)
+            row = "." * left + "".join("s" if x in (left, right - 1) or (x + y + frame) % 7 == 0 else "W"
+                                       for x in range(left, right)) + "." * (w - right)
+        rows.append(row)
+    return _hz(rows)
+
+
+def _burner(coil, shimmer):
+    """A 16x6 stovetop ring: 2 rows of heat shimmer above, then the coil."""
+    shimmer_rows = ["..r...r...r...r.", ".r...r...r...r.."] if shimmer == 0 else [".r...r...r...r..", "..r...r...r...r."]
+    rows = [*(shimmer_rows if shimmer is not None else ["." * 16] * 2),
+            "kkkkkkkkkkkkkkkk",
+            "k" + coil * 14 + "k",
+            "kk" + coil + "kkkkkkkkkk" + coil + "kk",
+            "kkk" + coil * 10 + "kkk"]
+    return _hz(rows)
+
+
+def _tap(collar):
+    """An 8x8 wall tap; the collar glows red while a drop forms."""
+    return _hz([
+        "pppp....",
+        "ptttp...",
+        "pppppppp",
+        "..ptttt" + "p",
+        "...p" + collar * 2 + "p.",
+        "...pttp.",
+        "....pp..",
+        "........",
+    ])
+
+
+def _drop(size):
+    """A 4x6 water drop; sizes 0-2 grow at the tap, 3 is the falling drop."""
+    shapes = [
+        ["....", "....", "....", "....", ".SS.", "...."],
+        ["....", "....", ".S..", ".SS.", "SsSS", ".SS."],
+        ["....", ".S..", ".SS.", "SWSS", "SSSS", ".SS."],
+        [".S..", ".SS.", "SWSS", "SWSS", "SSSS", ".SS."],
+    ]
+    return _hz(shapes[size])
+
+
+def _hazard_sprites():
+    sprites = {
+        "hz_vent_idle": _vent("G", lid_up=False),
+        "hz_vent_warn_0": _vent("r", lid_up=False),
+        "hz_vent_warn_1": _vent("r", lid_up=True),
+        "hz_burner_idle": _burner("t", None),
+        "hz_burner_warn": _burner("o", None),
+        "hz_tap": _tap("t"),
+        "hz_tap_warn": _tap("r"),
+        "hz_drop": _drop(3),
+    }
+    for i in range(2):
+        sprites[f"hz_jet_{i}"] = _jet(i)
+        sprites[f"hz_burner_hot_{i}"] = _burner("r", i)
+    for i in range(3):
+        sprites[f"hz_drop_form_{i}"] = _drop(i)
+    return sprites
+
+
 # 5x5 pixel font for the win/lose overlay and the treat HUD.
 _FONT = {
     "A": [".###.", "#...#", "#####", "#...#", "#...#"],
@@ -585,6 +693,7 @@ def load_sprites():
     for i in range(2):
         sprites[f"clock_{i}"] = surface_from_map(_clock(lit=i == 0), _DECOR_KEY)
     sprites.update(_scenery_sprites())  # R33-R38
+    sprites.update(_hazard_sprites())  # R45
     return sprites
 
 
